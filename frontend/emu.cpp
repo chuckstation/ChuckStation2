@@ -11,9 +11,9 @@ bool init(chuckstation2::instance* iris) {
     iris->ps2 = ps2_create();
 
     ps2_init(iris->ps2);
-    ps2_init_tty_handler(iris->ps2, PS2_TTY_EE, chuckstation2::handle_ee_tty_event, ChuckStation2);
-    ps2_init_tty_handler(iris->ps2, PS2_TTY_IOP, chuckstation2::handle_iop_tty_event, ChuckStation2);
-    ps2_init_tty_handler(iris->ps2, PS2_TTY_SYSMEM, chuckstation2::handle_sysmem_tty_event, ChuckStation2);
+    ps2_init_tty_handler(iris->ps2, PS2_TTY_EE, chuckstation2::handle_ee_tty_event, iris);
+    ps2_init_tty_handler(iris->ps2, PS2_TTY_IOP, chuckstation2::handle_iop_tty_event, iris);
+    ps2_init_tty_handler(iris->ps2, PS2_TTY_SYSMEM, chuckstation2::handle_sysmem_tty_event, iris);
 
     iris->ds[0] = ds_attach(iris->ps2->sio2, 0);
 

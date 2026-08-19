@@ -210,13 +210,13 @@ void show_breakpoints(chuckstation2::instance* iris) {
         Separator();
 
         if (BeginChild("##tablechild", ImVec2(0, GetContentRegionAvail().y / 2.0f))) {
-            show_breakpoints_table(ChuckStation2);
+            show_breakpoints_table(iris);
         } EndChild();
 
         SeparatorText("Add breakpoint");
 
         if (BeginChild("##tablechild2")) {
-            show_breakpoint_editor(ChuckStation2);
+            show_breakpoint_editor(iris);
         } EndChild();
     } End();
 }

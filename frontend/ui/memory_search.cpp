@@ -978,13 +978,13 @@ void show_memory_search(chuckstation2::instance* iris) {
         } EndChild(); SameLine();
 
         if (BeginChild("##search_options", ImVec2(0, GetContentRegionAvail().y - 220))) {
-            show_search_options(ChuckStation2);
+            show_search_options(iris);
         } EndChild();
 
         SeparatorText("Address list");
 
         if (BeginChild("##address_list")) {
-            show_address_list(ChuckStation2);
+            show_address_list(iris);
         } EndChild();
     } End();
 }

@@ -80,7 +80,7 @@ void show_status_bar(chuckstation2::instance* iris) {
 
         char buf[128];
 
-        sprintf(buf, "%s", emu::get_current_system_name(ChuckStation2));
+        sprintf(buf, "%s", emu::get_current_system_name(iris));
 
         float width = CalcTextSize(buf).x;
 

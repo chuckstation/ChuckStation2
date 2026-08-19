@@ -108,7 +108,7 @@ void show_bios_stage(chuckstation2::instance* iris) {
     SameLine();
 
     if (Button(ICON_MS_FOLDER)) {
-        audio::mute(ChuckStation2);
+        audio::mute(iris);
 
         auto f = pfd::open_file("Select BIOS file", "", {
             "All File Types (*.bin; *.rom0)", "*.bin *.rom0",
@@ -117,7 +117,7 @@ void show_bios_stage(chuckstation2::instance* iris) {
 
         while (!f.ready());
 
-        audio::unmute(ChuckStation2);
+        audio::unmute(iris);
 
         if (f.result().size()) {
             strncpy(buf, f.result().at(0).c_str(), 512);
@@ -185,8 +185,8 @@ void show_bios_setting_window(chuckstation2::instance* iris) {
 
     if (BeginPopupModal("Welcome", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         switch (stage) {
-            case 0: show_bios_stage(ChuckStation2); break;
-            case 1: show_memory_card_stage(ChuckStation2); break;
+            case 0: show_bios_stage(iris); break;
+            case 1: show_memory_card_stage(iris); break;
         }
 
         EndPopup();

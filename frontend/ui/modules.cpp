@@ -115,7 +115,7 @@ void show_iop_modules(chuckstation2::instance* iris) {
         Separator();
 
         if (BeginChild("##tablechild", ImVec2(0, GetContentRegionAvail().y * 0.9))) {
-            show_modules_table(ChuckStation2);
+            show_modules_table(iris);
 
             EndChild();
         }

@@ -556,7 +556,7 @@ void show_ee_control(chuckstation2::instance* iris) {
         SeparatorText("Disassembly");
 
         if (BeginChild("ee##disassembly")) {
-            show_ee_disassembly_view(ChuckStation2);
+            show_ee_disassembly_view(iris);
         } EndChild();
     } End();
 
@@ -590,7 +590,7 @@ void show_iop_control(chuckstation2::instance* iris) {
         SeparatorText("Disassembly");
 
         if (BeginChild("iop##disassembly")) {
-            show_iop_disassembly_view(ChuckStation2);
+            show_iop_disassembly_view(iris);
         } EndChild();
     } End();
 

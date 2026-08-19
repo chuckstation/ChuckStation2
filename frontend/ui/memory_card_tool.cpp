@@ -96,7 +96,7 @@ void show_memory_card_tool(chuckstation2::instance* iris) {
                 size_in_bytes = 128 * 1024;
             }
 
-            audio::mute(ChuckStation2);
+            audio::mute(iris);
 
             std::string default_path = iris->pref_path + "image.mcd";
 
@@ -113,7 +113,7 @@ void show_memory_card_tool(chuckstation2::instance* iris) {
 
             while (!f.ready());
 
-            audio::unmute(ChuckStation2);
+            audio::unmute(iris);
 
             if (f.result().size()) {
                 FILE* file = fopen(f.result().c_str(), "wb");

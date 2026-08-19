@@ -681,7 +681,7 @@ namespace shaders {
             rhs.m_input = input;
             rhs.m_vert_shader = vert_shader;
             rhs.m_frag_shader = frag_shader;
-            rhs.m_iris = ChuckStation2;
+            rhs.m_iris = iris;
             rhs.m_id = id;
         }
 
