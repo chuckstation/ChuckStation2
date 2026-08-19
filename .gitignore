@@ -1,0 +1,67 @@
+# Build artifacts
+build/
+bin/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.AppImage
+*.apk
+*.aab
+
+# IDE files
+.vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Android
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/captures/
+android/app/src/main/jniLibs/
+*.keystore
+*.jks
+
+# ROM / disc images (never commit these)
+roms/
+*.cue
+*.bin
+*.iso
+*.chd
+*.elf
+*.nvm
+*.mcd
+*.mec
+*.wav
+*.irx
+
+# Debug / analysis files
+*.expected
+*.dump
+screens/
+ac/
+compare
+tools/
+main2.cpp
+compare.cpp
+elf/
+SDL2-*/
+
+# Config (user-specific)
+imgui.ini
+
+# Dependencies (if not using submodules)
+# deps/

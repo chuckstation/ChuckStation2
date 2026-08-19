@@ -1,0 +1,578 @@
+#include <filesystem>
+
+#include "chuckstation2.hpp"
+
+#include "res/IconsMaterialSymbols.h"
+#include "portable-file-dialogs.h"
+
+#include "ps2_elf.h"
+#include "ps2_iso9660.h"
+
+namespace chuckstation2 {
+
+const char* aspect_mode_names[] = {
+    "Native",
+    "Stretch",
+    "Stretch (Keep aspect ratio)",
+    "Force 4:3 (NTSC)",
+    "Force 16:9 (Widescreen)",
+    "Force 5:4 (PAL)",
+    "Auto"
+};
+
+const char* renderer_names[] = {
+    "Null",
+    "Software",
+    "Hardware (Vulkan)"
+};
+
+const char* fullscreen_names[] = {
+    "Windowed",
+    "Fullscreen"
+};
+
+const char* rotation_names[] = {
+    "0 degrees",
+    "90 degrees",
+    "180 degrees",
+    "270 degrees"
+};
+
+int fullscreen_flags[] = {
+    0,
+    SDL_WINDOW_FULLSCREEN
+};
+
+void show_main_menubar(chuckstation2::instance* iris) {
+    using namespace ImGui;
+
+    PushFont(iris->font_icons);
+    PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0, 7.0));
+
+    if (BeginMainMenuBar()) {
+        ImVec2 size = GetWindowSize();
+
+        if (BeginMenu("ChuckStation2")) {
+            if (MenuItem(ICON_MS_DRIVE_FILE_MOVE " Open...")) {
+                audio::mute(ChuckStation2);
+
+                auto f = pfd::open_file("Select a file to load", "", {
+                    "All File Types (*.iso; *.bin; *.cue; *.chd; *.cso; *.zso; *.elf)", "*.iso *.bin *.cue *.chd *.cso *.zso *.elf",
+                    "Disc Images (*.iso; *.bin; *.cue; *.chd; *.cso; *.zso)", "*.iso *.bin *.cue *.chd *.cso *.zso",
+                    "CD Images (*.bin; *.cue; *.chd)", "*.bin *.cue *.chd",
+                    "DVD Images (*.iso; *.chd; *.cso; *.zso)", "*.iso *.chd *.cso *.zso",
+                    "ISO Files (*.iso)", "*.iso",
+                    "CUE Files (*.cue)", "*.cue",
+                    "BIN Files (*.bin)", "*.bin",
+                    "CHD Files (*.chd)", "*.chd",
+                    "CSO/ZSO Files (*.cso; *.zso)", "*.cso *.zso",
+                    "ELF Executables (*.elf)", "*.elf",
+                    "All Files (*.*)", "*"
+                });
+
+                while (!f.ready());
+
+                audio::unmute(ChuckStation2);
+
+                if (f.result().size()) {
+                    std::string path = f.result().at(0);
+
+                    if (path.size()) {
+                        if (open_file(iris, path)) {
+                            push_info(iris, "Failed to open file: " + path);
+                        } else {
+                            add_recent(iris, path, RECENT_TYPE_PS2);
+                        }
+                    }
+                }
+            }
+
+            if (BeginMenu(ICON_MS_HISTORY " Open Recent", iris->recents.size())) {
+                for (const auto& recent : iris->recents) {
+                    if (MenuItem(recent.path.c_str())) {
+                        if (recent.type == RECENT_TYPE_PS2) {
+                            if (open_file(iris, recent.path)) {
+                                push_info(iris, "Failed to open file: " + recent.path);
+                            } else {
+                                add_recent(iris, recent.path, recent.type);
+                            }
+                        } else {
+                            if (!emu::load_arcade(iris, recent.path)) {
+                                push_info(iris, "Failed to boot arcade: " + recent.path);
+                            } else {
+                                add_recent(iris, recent.path, RECENT_TYPE_ARCADE);
+                            }
+                        }
+                    }
+                }
+
+                Separator();
+
+                if (MenuItem(ICON_MS_DELETE_HISTORY " Clear all recents")) {
+                    iris->recents.clear();
+                }
+
+                // To-do: Use try_open_file
+                // if (MenuItem("Clear invalid recents")) {
+                //     iris->recents.clear();
+                // }
+
+                // To-do
+                // if (MenuItem("Stop recents history")) {
+                // }
+
+                ImGui::EndMenu();
+            }
+
+            if (MenuItem(ICON_MS_JOYSTICK " Open Arcade...")) {
+                audio::mute(ChuckStation2);
+
+                auto f = pfd::select_folder("Select arcade game folder", "", pfd::opt::none);
+
+                while (!f.ready());
+
+                audio::unmute(ChuckStation2);
+
+                if (f.result().size()) {
+                    std::string path = f.result();
+
+                    if (path.size()) {
+                        if (!emu::load_arcade(iris, path)) {
+                            push_info(iris, "Failed to boot arcade: " + path);
+                        } else {
+                            add_recent(iris, path, RECENT_TYPE_ARCADE);
+                        }
+                    }
+                }
+            }
+
+            // if (MenuItem(ICON_MS_DRIVE_FILE_MOVE " Load disc...")) {
+            //     const char* patterns[3] = { "*.iso", "*.bin", "*.cue" };
+
+            //     const char* file = tinyfd_openFileDialog(
+            //         "Select CD/DVD image",
+            //         "",
+            //         3,
+            //         patterns,
+            //         "Disc images",
+            //         0
+            //     );
+
+            //     if (file) {
+            //         struct iso9660_state* iso = iso9660_open(file);
+
+            //         if (!iso) {
+            //             printf("ChuckStation2: Couldn't open disc image \"%s\"\n", file);
+
+            //             exit(1);
+
+            //             return;
+            //         }
+
+            //         char* boot_file = iso9660_get_boot_path(iso);
+
+            //         if (!boot_file)
+            //             return;
+
+            //         // Temporarily disable window updates
+            //         struct gs_callback cb = *ps2_gs_get_callback(iris->ps2->gs, GS_EVENT_VBLANK);
+
+            //         ps2_gs_remove_callback(iris->ps2->gs, GS_EVENT_VBLANK);
+            //         ps2_boot_file(iris->ps2, boot_file);
+
+            //         // Re-enable window updates
+            //         ps2_gs_init_callback(iris->ps2->gs, GS_EVENT_VBLANK, cb.func, cb.udata);
+
+            //         ps2_cdvd_open(iris->ps2->cdvd, file);
+
+            //         iso9660_close(iso);
+
+            //         iris->loaded = file;
+            //     }
+            // }
+
+            // if (MenuItem(ICON_MS_DRAFT " Load executable...")) {
+            //     const char* patterns[3] = { "*.elf" };
+
+            //     const char* file = tinyfd_openFileDialog(
+            //         "Select ELF executable",
+            //         "",
+            //         1,
+            //         patterns,
+            //         "ELF executables",
+            //         0
+            //     );
+
+            //     if (file) {
+            //         std::string str(file);
+
+            //         str = "host:" + str;
+
+            //         // Temporarily disable window updates
+            //         struct gs_callback cb = *ps2_gs_get_callback(iris->ps2->gs, GS_EVENT_VBLANK);
+
+            //         ps2_gs_remove_callback(iris->ps2->gs, GS_EVENT_VBLANK);
+
+            //         ps2_boot_file(iris->ps2, str.c_str());
+
+            //         // ps2_elf_load(iris->ps2, file);
+
+            //         // Re-enable window updates
+            //         ps2_gs_init_callback(iris->ps2->gs, GS_EVENT_VBLANK, cb.func, cb.udata);
+
+            //         iris->loaded = file;
+            //     }
+            // }
+
+            Separator();
+
+            if (MenuItem(iris->pause ? ICON_MS_PLAY_ARROW " Run" : ICON_MS_PAUSE " Pause", "Space")) {
+                iris->pause = !iris->pause;
+            }
+
+            // To-do: Show confirm dialog maybe?
+            if (MenuItem(ICON_MS_REFRESH " Reset")) {
+                ps2_reset(iris->ps2);
+            }
+
+            if (MenuItem(ICON_MS_FOLDER " Change disc...")) {
+                audio::mute(ChuckStation2);
+
+                auto f = pfd::open_file("Select CD/DVD image", "", {
+                    "Disc Images (*.iso; *.bin; *.cue; *.chd; *.cso; *.zso)", "*.iso *.bin *.cue *.chd *.cso *.zso",
+                    "CD Images (*.bin; *.cue; *.chd)", "*.bin *.cue *.chd",
+                    "DVD Images (*.iso; *.chd; *.cso; *.zso)", "*.iso *.chd *.cso *.zso",
+                    "ISO Files (*.iso)", "*.iso",
+                    "CUE Files (*.cue)", "*.cue",
+                    "BIN Files (*.bin)", "*.bin",
+                    "CHD Files (*.chd)", "*.chd",
+                    "CSO/ZSO Files (*.cso; *.zso)", "*.cso *.zso",
+                    "All Files (*.*)", "*"
+                });
+
+                while (!f.ready());
+
+                audio::unmute(ChuckStation2);
+
+                if (f.result().size()) {
+                    // 2-second delay to allow the disc to spin up
+                    if (!ps2_cdvd_open(iris->ps2->cdvd, f.result().at(0).c_str(), 38860800*2)) {
+                        iris->loaded = f.result().at(0);
+                    }
+                }
+            }
+
+            if (MenuItem(ICON_MS_EJECT " Eject disc")) {
+                iris->loaded = "";
+
+                ps2_cdvd_close(iris->ps2->cdvd);
+            }
+
+            ImGui::EndMenu();
+        }
+        if (BeginMenu("Settings")) {
+            if (BeginMenu(ICON_MS_MONITOR " Display")) {
+                if (BeginMenu(ICON_MS_BRUSH " Renderer")) {
+                    for (int i = 0; i < 3; i++) {
+                        BeginDisabled(i == RENDERER_BACKEND_SOFTWARE);
+
+                        if (MenuItem(renderer_names[i], nullptr, i == iris->renderer_backend)) {
+                            render::switch_backend(iris, i);
+                        }
+
+                        EndDisabled();
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                if (BeginMenu(ICON_MS_CROP " Scale")) {
+                    for (int i = 2; i <= 6; i++) {
+                        char buf[16]; snprintf(buf, 16, "%.1fx", (float)i * 0.5f);
+
+                        if (MenuItem(buf, nullptr, ((float)i * 0.5f) == iris->scale)) {
+                            iris->scale = (float)i * 0.5f;
+
+                            // renderer_set_scale(iris->ctx, iris->scale);
+                        }
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                if (BeginMenu(ICON_MS_ASPECT_RATIO " Aspect mode")) {
+                    for (int i = 0; i < 7; i++) {
+                        if (MenuItem(aspect_mode_names[i], nullptr, iris->aspect_mode == i)) {
+                            iris->aspect_mode = i;
+
+                            // renderer_set_aspect_mode(iris->ctx, iris->aspect_mode);
+                        }
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                if (BeginMenu(ICON_MS_FILTER " Scaling filter")) {
+                    const char* filter_names[] = {
+                        "Nearest",
+                        "Bilinear",
+                        "Cubic"
+                    };
+
+                    for (int i = 0; i < 3; i++) {
+                        BeginDisabled(i == 2 && !iris->cubic_supported);
+                        if (MenuItem(filter_names[i], nullptr, iris->filter == i)) {
+                            iris->filter = i;
+                        }
+                        EndDisabled();
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                if (BeginMenu(ICON_MS_SCREEN_ROTATION " Rotation")) {
+                    const int normalized_angle = ((iris->angle % 360) + 360) % 360;
+                    const int rotation_index = normalized_angle / 90;
+
+                    for (int i = 0; i < 4; i++) {
+                        if (MenuItem(rotation_names[i], nullptr, rotation_index == i)) {
+                            iris->angle = i * 90;
+                        }
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                if (BeginMenu(ICON_MS_ASPECT_RATIO " Window size")) {
+                    const char* sizes[] = {
+                        "640x480",
+                        "800x600",
+                        "960x720",
+                        "1024x768",
+                        "1280x720",
+                        "1280x960"
+                    };
+
+                    int widths[] = {
+                        640, 800, 960, 1024, 1280, 1280
+                    };
+
+                    int heights[] = {
+                        480, 600, 720, 768, 720, 960
+                    };
+
+                    for (int i = 0; i < 6; i++) {
+                        bool selected = iris->window_width == widths[i] && iris->window_height == heights[i];
+
+                        if (MenuItem(sizes[i], nullptr, selected)) {
+                            iris->window_width = widths[i];
+                            iris->window_height = heights[i];
+
+                            SDL_SetWindowSize(iris->window, iris->window_width, iris->window_height + get_menubar_height(ChuckStation2));
+                        }
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                if (MenuItem(ICON_MS_SPEED_2X " Integer scaling", nullptr, &iris->integer_scaling)) {
+                    // renderer_set_integer_scaling(iris->ctx, iris->integer_scaling);
+                }
+
+                MenuItem(ICON_MS_FLIP " Flip horizontally", nullptr, &iris->flip_x);
+                MenuItem(ICON_MS_FLIP " Flip vertically", nullptr, &iris->flip_y);
+
+                if (MenuItem(ICON_MS_FULLSCREEN " Fullscreen", "F11", &iris->fullscreen)) {
+                    SDL_SetWindowFullscreen(iris->window, iris->fullscreen);
+                }
+
+                if (MenuItem(ICON_MS_SYNC " VSync", nullptr, &iris->vsync)) {
+                    imgui::set_vsync(iris, iris->vsync);
+                    iris->swapchain_rebuild = true;
+                }
+
+                if (MenuItem(ICON_MS_IMAGE " Enable shaders", nullptr, &iris->enable_shaders)) {
+                    // renderer_set_shaders_enabled(iris->ctx, iris->enable_shaders);
+                }
+
+                ImGui::EndMenu();
+            }
+
+            if (BeginMenu(ICON_MS_MUSIC_NOTE " Audio")) {
+                PushStyleVarY(ImGuiStyleVar_FramePadding, 0.0f);
+                AlignTextToFramePadding();
+
+                const char* icon = ICON_MS_VOLUME_UP;
+
+                if (iris->volume == 0.0f) {
+                    icon = ICON_MS_VOLUME_MUTE;
+                } else if (iris->volume <= 0.5f) {
+                    icon = ICON_MS_VOLUME_DOWN;
+                }
+
+                Text(icon); SameLine();
+                
+                SetNextItemWidth(100.0f);
+                SliderFloat("Volume", &iris->volume, 0.0f, 1.0f, "%.1f");
+                PopStyleVar();
+ 
+                MenuItem(ICON_MS_VOLUME_OFF " Mute", nullptr, &iris->mute);
+                MenuItem(ICON_MS_MUSIC_OFF " Mute ADMA", nullptr, &iris->mute_adma);
+
+                ImGui::EndMenu();
+            }
+
+            if (MenuItem(ICON_MS_DOCK_TO_BOTTOM " Show status bar", nullptr, &iris->show_status_bar)) {
+                SDL_SetWindowSize(iris->window, iris->window_width, iris->window_height + get_menubar_height(ChuckStation2));
+            }
+
+            if (MenuItem(ICON_MS_OPEN_IN_NEW " Open data folder")) {
+                SDL_OpenURL(iris->pref_path.c_str());
+            }
+
+            Separator();
+
+            if (MenuItem(ICON_MS_MANUFACTURING " Settings...")) {
+                iris->show_settings = true;
+            }
+
+            ImGui::EndMenu();
+        }
+        if (BeginMenu("Tools")) {
+            if (MenuItem(ICON_MS_BUILD " ImGui Demo", NULL, &iris->show_imgui_demo));
+            if (MenuItem(ICON_MS_SEARCH " Memory search", NULL, &iris->show_memory_search));
+            if (MenuItem(ICON_MS_PHOTO_CAMERA " Take screenshot...", "F9")) {
+                audio::mute(ChuckStation2);
+
+                std::string filename = input::get_default_screenshot_filename(ChuckStation2);
+
+                auto f = pfd::save_file("Save screenshot", filename, {
+                    "PNG (*.png)", "*.png",
+                    "JPG (*.jpg)", "*.jpg",
+                    "BMP (*.bmp)", "*.bmp",
+                    "TGA (*.tga)", "*.tga",
+                    "All Files (*.*)", "*"
+                });
+
+                while (!f.ready());
+
+                audio::unmute(ChuckStation2);
+
+                if (f.result().size()) {
+                    input::save_screenshot(iris, f.result());
+                }
+            }
+
+            if (MenuItem(ICON_MS_SD_CARD " Memory Card tool")) {
+                iris->show_memory_card_tool = true;
+            }
+
+            ImGui::EndMenu();
+        }
+        if (BeginMenu("Debug")) {
+            SeparatorText("EE");
+            // if (BeginMenu(ICON_MS_BUG_REPORT " EE")) {
+                if (MenuItem(ICON_MS_SETTINGS " Control##ee", NULL, &iris->show_ee_control));
+                if (MenuItem(ICON_MS_EDIT_NOTE " State##ee", NULL, &iris->show_ee_state));
+                if (MenuItem(ICON_MS_TERMINAL " Logs##ee", NULL, &iris->show_ee_logs));
+                if (MenuItem(ICON_MS_BOLT " Interrupts##ee", NULL, &iris->show_ee_interrupts));
+
+                BeginDisabled(iris->symbols.empty());
+                if (MenuItem(ICON_MS_CODE " Symbols##ee", NULL, &iris->show_symbols));
+                EndDisabled();
+
+                if (MenuItem(ICON_MS_ACCOUNT_TREE " Threads##ee", NULL, &iris->show_threads));
+
+                // ImGui::EndMenu();
+            // }
+
+            SeparatorText("IOP");
+            // if (BeginMenu(ICON_MS_BUG_REPORT " IOP")) {
+                if (MenuItem(ICON_MS_SETTINGS " Control##iop", NULL, &iris->show_iop_control));
+                if (MenuItem(ICON_MS_EDIT_NOTE " State##iop", NULL, &iris->show_iop_state));
+                if (MenuItem(ICON_MS_TERMINAL " Logs##iop", NULL, &iris->show_iop_logs));
+                if (MenuItem(ICON_MS_BOLT " Interrupts##iop", NULL, &iris->show_iop_interrupts));
+                if (MenuItem(ICON_MS_EXTENSION " Modules##iop", NULL, &iris->show_iop_modules));
+
+            //     ImGui::EndMenu();
+            // }
+
+            Separator();
+
+            if (MenuItem(ICON_MS_BUG_REPORT " Breakpoints", NULL, &iris->show_breakpoints));
+            if (MenuItem(ICON_MS_BRUSH " GS debugger", NULL, &iris->show_gs_debugger));
+            if (MenuItem(ICON_MS_MUSIC_NOTE " SPU2 debugger", NULL, &iris->show_spu2_debugger));
+            if (MenuItem(ICON_MS_MEMORY " Memory viewer", NULL, &iris->show_memory_viewer));
+            if (MenuItem(ICON_MS_VIEW_IN_AR " VU disassembler", NULL, &iris->show_vu_disassembler));
+            if (MenuItem(ICON_MS_GAMEPAD " DualShock debugger", NULL, &iris->show_pad_debugger));
+            if (MenuItem(ICON_MS_BUG_REPORT " Performance overlay", NULL, &iris->show_overlay));
+            if (MenuItem(ICON_MS_TERMINAL " SYSMEM logs", NULL, &iris->show_sysmem_logs));
+
+            Separator();
+
+            if (BeginMenu(ICON_MS_MORE_TIME " Timescale")) {
+                for (int i = 0; i < 9; i++) {
+                    char buf[16]; snprintf(buf, 16, "%dx", 1 << i);
+
+                    if (MenuItem(buf, nullptr, iris->timescale == (1 << i))) {
+                        iris->timescale = (1 << i);
+
+                        ps2_set_timescale(iris->ps2, iris->timescale);
+                    }
+                }
+
+                ImGui::EndMenu();
+            }
+
+            if (MenuItem(ICON_MS_SKIP_NEXT " Skip FMVs", NULL, &iris->skip_fmv)) {
+                printf("Skip FMVs: %d\n", iris->skip_fmv);
+                ee_set_fmv_skip(iris->ps2->ee, iris->skip_fmv);
+            }
+
+            if (MenuItem(ICON_MS_CLOSE " Close all")) {
+                iris->show_ee_control = false;
+                iris->show_ee_state = false;
+                iris->show_ee_logs = false;
+                iris->show_ee_interrupts = false;
+                iris->show_ee_dmac = false;
+                iris->show_iop_control = false;
+                iris->show_iop_state = false;
+                iris->show_iop_logs = false;
+                iris->show_iop_interrupts = false;
+                iris->show_iop_modules = false;
+                iris->show_iop_dma = false;
+                iris->show_gs_debugger = false;
+                iris->show_spu2_debugger = false;
+                iris->show_memory_viewer = false;
+                iris->show_memory_search = false;
+                iris->show_vu_disassembler = false;
+                iris->show_status_bar = false;
+                iris->show_breakpoints = false;
+                iris->show_threads = false;
+                iris->show_sysmem_logs = false;
+                iris->show_imgui_demo = false;
+                iris->show_overlay = false;
+            }
+            
+            ImGui::EndMenu();
+        }
+        if (BeginMenu("Help")) {
+            if (MenuItem(ICON_MS_INFO " About")) {
+                iris->show_about_window = true;
+            }
+
+            if (MenuItem(ICON_MS_EXCLAMATION " Report an issue")) {
+                SDL_OpenURL("https://github.com/chuckstation/ChuckStation2/issues/new");
+            }
+
+            ImGui::EndMenu();
+        }
+
+        EndMainMenuBar();
+    }
+
+    PopStyleVar();
+    PopFont();
+}
+
+}

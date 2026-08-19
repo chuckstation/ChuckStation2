@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ChuckStation2</string>
+    <string name="loading">Loading ChuckStation2…</string>
+    <string name="vulkan_not_supported">This device does not support Vulkan. ChuckStation2 requires Vulkan to run.</string>
+    <string name="rom_picker_title">Select a disc image</string>
+</resources>

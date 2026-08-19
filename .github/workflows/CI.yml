@@ -1,0 +1,253 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  push:
+    tags:
+    - 'v*'
+
+# Cancel in-progress runs for the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ================================================================
+  # Linux
+  # ================================================================
+  linux:
+    name: Linux (x86_64)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+        fetch-depth: 0
+
+    - name: Install system dependencies
+      run: |
+        sudo add-apt-repository universe
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential git make ninja-build pkg-config \
+          libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev \
+          libx11-dev libxext-dev libxrandr-dev libxcursor-dev \
+          libxfixes-dev libxi-dev libxss-dev libxtst-dev \
+          libxkbcommon-dev libdrm-dev libgbm-dev \
+          libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev \
+          libdbus-1-dev libibus-1.0-dev libudev-dev libfuse2t64 \
+          libvulkan-dev
+
+    - name: Build ChuckStation2
+      run: |
+        git fetch --all --tags
+        cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+        cmake --build build -j$(nproc)
+
+    - name: Package binary
+      run: |
+        mkdir -p dist
+        cp ./build/ChuckStation2 ./dist/
+
+    - name: Build AppImage
+      run: |
+        sudo cmake --install build
+        mkdir -p appimage
+        mv ./build/*.AppImage ./appimage/ 2>/dev/null || true
+
+    - name: Upload binary artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chuckstation2-linux
+        path: ./dist
+
+    - name: Upload AppImage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chuckstation2-linux-appimage
+        path: ./appimage
+        if-no-files-found: ignore
+
+    - name: Upload release asset
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: |
+        zip -rj ChuckStation2-${{ github.ref_name }}-linux.zip dist/
+    - name: Publish release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ChuckStation2-*.zip
+
+  # ================================================================
+  # macOS (Universal: x86_64 + arm64)
+  # ================================================================
+  macos:
+    name: macOS (Universal)
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+        fetch-depth: 0
+
+    - name: Install Vulkan SDK
+      uses: jakoch/install-vulkan-sdk-action@v1
+      with:
+        optional_components: com.lunarg.vulkan.volk
+        install_runtime: true
+        cache: true
+        stripdown: true
+
+    - name: Build ChuckStation2 (Universal Binary)
+      run: |
+        git fetch --all --tags
+        cmake -S . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+        cmake --build build -j$(sysctl -n hw.ncpu)
+
+    - name: Package macOS app bundle
+      run: |
+        sudo cmake --install build
+        mkdir -p dist
+        cp -R ./build/ChuckStation2.app ./dist/
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chuckstation2-macos-universal
+        path: ./dist
+
+    - name: Upload release asset
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: |
+        cd build && zip -r ../ChuckStation2-${{ github.ref_name }}-macos-universal.zip ./ChuckStation2.app && cd ..
+    - name: Publish release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ChuckStation2-*.zip
+
+  # ================================================================
+  # Windows
+  # ================================================================
+  windows:
+    name: Windows (x86_64)
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+        fetch-depth: 0
+
+    - name: Install Vulkan SDK
+      uses: jakoch/install-vulkan-sdk-action@v1
+      with:
+        optional_components: com.lunarg.vulkan.volk
+        install_runtime: true
+        cache: true
+        stripdown: true
+
+    - name: Build ChuckStation2
+      run: |
+        git fetch --all --tags
+        cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+        cmake --build build -j8
+
+    - name: Package Windows binary
+      shell: pwsh
+      run: |
+        New-Item -Path "dist" -ItemType Directory -Force
+        Copy-Item -Path ".\build\ChuckStation2.exe" "dist"
+        if (Test-Path ".\build\*.dll") { Copy-Item ".\build\*.dll" "dist" }
+        if (Test-Path "C:\mingw64\bin\*.dll") { Copy-Item "C:\mingw64\bin\*.dll" "dist" }
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chuckstation2-windows
+        path: dist/
+
+    - name: Upload release asset
+      if: startsWith(github.ref, 'refs/tags/v')
+      shell: pwsh
+      run: |
+        Compress-Archive -Path "dist\*" -DestinationPath "ChuckStation2-${{ github.ref_name }}-windows.zip"
+    - name: Publish release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ChuckStation2-*.zip
+
+  # ================================================================
+  # Android (arm64-v8a + x86_64)
+  # ================================================================
+  android:
+    name: Android (arm64 + x86_64)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+        fetch-depth: 0
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Set up Android SDK & NDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Android NDK
+      run: |
+        sdkmanager --install "ndk;26.1.10909125"
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+        restore-keys: |
+          gradle-${{ runner.os }}-
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x android/gradlew
+
+    - name: Build APK (arm64-v8a)
+      run: |
+        cd android
+        ./gradlew assembleArm64Debug --no-daemon --stacktrace
+
+    - name: Build APK (x86_64)
+      run: |
+        cd android
+        ./gradlew assembleX86_64Debug --no-daemon --stacktrace
+
+    - name: Upload arm64-v8a artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chuckstation2-android-arm64
+        path: android/app/build/outputs/apk/arm64/debug/*.apk
+
+    - name: Upload x86_64 artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chuckstation2-android-x86_64
+        path: android/app/build/outputs/apk/x86_64/debug/*.apk
+
+    - name: Build release APKs
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: |
+        cd android
+        ./gradlew assembleRelease --no-daemon
+
+    - name: Publish release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: android/app/build/outputs/apk/**/*.apk

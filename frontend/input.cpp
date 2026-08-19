@@ -1,0 +1,552 @@
+#include <filesystem>
+#include <string>
+
+#include "chuckstation2.hpp"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+#define INCBIN_PREFIX g_
+#define INCBIN_STYLE INCBIN_STYLE_SNAKE
+
+#include "incbin.h"
+
+INCBIN(gamecontrollerdb, "../deps/SDL_GameControllerDB/gamecontrollerdb.txt");
+
+namespace chuckstation2 {
+
+void keyboard_device::handle_event(chuckstation2::instance* iris, SDL_Event* event) {
+    auto ievent = input::sdl_event_to_input_event(event);
+    auto action = input::get_input_action(iris, m_slot, ievent.u64);
+
+    if (!action)
+        return;
+
+    input::execute_action(iris, *action, m_slot, event->type == SDL_EVENT_KEY_DOWN ? 1.0f : 0.0f);
+}
+
+void gamepad_device::handle_event(chuckstation2::instance* iris, SDL_Event* event) {
+    auto ievent = input::sdl_event_to_input_event(event);
+    auto action = input::get_input_action(iris, m_slot, ievent.u64);
+
+    if (!action)
+        return;
+
+    if (event->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+        input::execute_action(iris, *action, m_slot, 1.0f);
+    } else if (event->type == SDL_EVENT_GAMEPAD_BUTTON_UP) {
+        input::execute_action(iris, *action, m_slot, 0.0f);
+    } else if (event->type == SDL_EVENT_GAMEPAD_AXIS_MOTION) {
+        // Convert from -32768->32767 to -1.0->1.0 and take absolute value
+        float value = fabs(event->gaxis.value / 32767.0f);
+
+        input::execute_action(iris, *action, m_slot, value);
+    }
+}
+
+}
+
+namespace chuckstation2::input {
+
+void load_db_default(chuckstation2::instance* iris) {
+    SDL_IOStream* ios = SDL_IOFromConstMem(g_gamecontrollerdb_data, g_gamecontrollerdb_size);
+
+    SDL_AddGamepadMappingsFromIO(ios, true);
+}
+
+bool load_db_from_file(chuckstation2::instance* iris, const char* path) {
+    if (SDL_AddGamepadMappingsFromFile(path) == -1)
+        return false;
+
+    return true;
+}
+
+#define IEVENT(event, id, mod) \
+    (((uint64_t)event << 32) | (((id & 0xf0000fff) | ((mod & 0xffff) << 12)) & 0xffffffff))
+
+void init_default_mapping(chuckstation2::instance* iris, int id) {
+    mapping& map = iris->input_maps[id];
+
+    if (id == 0) {
+        map.name = "Keyboard (default)";
+
+        map.map.clear();
+
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_X     , SDL_KMOD_NONE), CS2_DS_BT_CROSS);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_A     , SDL_KMOD_NONE), CS2_DS_BT_SQUARE);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_W     , SDL_KMOD_NONE), CS2_DS_BT_TRIANGLE);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_D     , SDL_KMOD_NONE), CS2_DS_BT_CIRCLE);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_RETURN, SDL_KMOD_NONE), CS2_DS_BT_START);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_S     , SDL_KMOD_NONE), CS2_DS_BT_SELECT);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_UP    , SDL_KMOD_NONE), CS2_DS_BT_UP);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_DOWN  , SDL_KMOD_NONE), CS2_DS_BT_DOWN);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_LEFT  , SDL_KMOD_NONE), CS2_DS_BT_LEFT);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_RIGHT , SDL_KMOD_NONE), CS2_DS_BT_RIGHT);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_Q     , SDL_KMOD_NONE), CS2_DS_BT_L1);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_E     , SDL_KMOD_NONE), CS2_DS_BT_R1);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_1     , SDL_KMOD_NONE), CS2_DS_BT_L2);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_3     , SDL_KMOD_NONE), CS2_DS_BT_R2);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_Z     , SDL_KMOD_NONE), CS2_DS_BT_L3);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_C     , SDL_KMOD_NONE), CS2_DS_BT_R3);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_I     , SDL_KMOD_NONE), CS2_DS_AX_LEFTV_POS);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_J     , SDL_KMOD_NONE), CS2_DS_AX_LEFTH_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_K     , SDL_KMOD_NONE), CS2_DS_AX_LEFTV_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_L     , SDL_KMOD_NONE), CS2_DS_AX_LEFTH_POS);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_T     , SDL_KMOD_NONE), CS2_DS_AX_RIGHTV_POS);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_F     , SDL_KMOD_NONE), CS2_DS_AX_RIGHTH_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_G     , SDL_KMOD_NONE), CS2_DS_AX_RIGHTV_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_H     , SDL_KMOD_NONE), CS2_DS_AX_RIGHTH_POS);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_0     , SDL_KMOD_NONE), CS2_S14X_SW_SERVICE);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_9     , SDL_KMOD_NONE), CS2_S14X_SW_TEST);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_8     , SDL_KMOD_NONE), CS2_S14X_SW_ENTER);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_7     , SDL_KMOD_NONE), CS2_S14X_SW_UP);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_6     , SDL_KMOD_NONE), CS2_S14X_SW_DOWN);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_1     , SDL_KMOD_LSHIFT), CS2_S14X_SW_P1_START);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_2     , SDL_KMOD_LSHIFT), CS2_S14X_SW_P2_START);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_3     , SDL_KMOD_LSHIFT), CS2_S14X_SW_P3_START);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_4     , SDL_KMOD_LSHIFT), CS2_S14X_SW_P4_START);
+    } else {
+        map.name = "Gamepad (default)";
+
+        map.map.clear();
+
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_SOUTH         , SDL_KMOD_NONE), CS2_DS_BT_CROSS);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_WEST          , SDL_KMOD_NONE), CS2_DS_BT_SQUARE);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_NORTH         , SDL_KMOD_NONE), CS2_DS_BT_TRIANGLE);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_EAST          , SDL_KMOD_NONE), CS2_DS_BT_CIRCLE);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_START         , SDL_KMOD_NONE), CS2_DS_BT_START);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_BACK          , SDL_KMOD_NONE), CS2_DS_BT_SELECT);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_DPAD_UP       , SDL_KMOD_NONE), CS2_DS_BT_UP);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_DPAD_DOWN     , SDL_KMOD_NONE), CS2_DS_BT_DOWN);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_DPAD_LEFT     , SDL_KMOD_NONE), CS2_DS_BT_LEFT);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_DPAD_RIGHT    , SDL_KMOD_NONE), CS2_DS_BT_RIGHT);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_LEFT_SHOULDER , SDL_KMOD_NONE), CS2_DS_BT_L1);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, SDL_KMOD_NONE), CS2_DS_BT_R1);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_LEFT_STICK    , SDL_KMOD_NONE), CS2_DS_BT_L3);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_RIGHT_STICK   , SDL_KMOD_NONE), CS2_DS_BT_R3);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_LEFT_TRIGGER    , SDL_KMOD_NONE), CS2_DS_BT_L2);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER   , SDL_KMOD_NONE), CS2_DS_BT_R2);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_LEFTY           , SDL_KMOD_NONE), CS2_DS_AX_LEFTV_POS);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_NEG, SDL_GAMEPAD_AXIS_LEFTY           , SDL_KMOD_NONE), CS2_DS_AX_LEFTV_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_LEFTX           , SDL_KMOD_NONE), CS2_DS_AX_LEFTH_POS);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_NEG, SDL_GAMEPAD_AXIS_LEFTX           , SDL_KMOD_NONE), CS2_DS_AX_LEFTH_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_RIGHTY          , SDL_KMOD_NONE), CS2_DS_AX_RIGHTV_POS);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_NEG, SDL_GAMEPAD_AXIS_RIGHTY          , SDL_KMOD_NONE), CS2_DS_AX_RIGHTV_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_RIGHTX          , SDL_KMOD_NONE), CS2_DS_AX_RIGHTH_POS);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_NEG, SDL_GAMEPAD_AXIS_RIGHTX          , SDL_KMOD_NONE), CS2_DS_AX_RIGHTH_NEG);
+    }
+}
+
+bool init(chuckstation2::instance* iris) {
+    if (!iris->gcdb_path.size()) {
+        fprintf(stdout, "input: Adding default database\n");
+
+        load_db_default(ChuckStation2);
+    } else {
+        fprintf(stdout, "input: Adding database from file \'%s\'\n", iris->gcdb_path.c_str());
+
+        load_db_from_file(iris, iris->gcdb_path.c_str());
+    }
+
+    iris->input_devices[0] = new chuckstation2::keyboard_device();
+
+    if (iris->input_maps.size() == 0) {
+        mapping map;
+
+        map.name = "Keyboard (default)";
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_X     , SDL_KMOD_NONE), CS2_DS_BT_CROSS);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_A     , SDL_KMOD_NONE), CS2_DS_BT_SQUARE);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_W     , SDL_KMOD_NONE), CS2_DS_BT_TRIANGLE);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_D     , SDL_KMOD_NONE), CS2_DS_BT_CIRCLE);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_RETURN, SDL_KMOD_NONE), CS2_DS_BT_START);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_S     , SDL_KMOD_NONE), CS2_DS_BT_SELECT);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_UP    , SDL_KMOD_NONE), CS2_DS_BT_UP);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_DOWN  , SDL_KMOD_NONE), CS2_DS_BT_DOWN);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_LEFT  , SDL_KMOD_NONE), CS2_DS_BT_LEFT);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_RIGHT , SDL_KMOD_NONE), CS2_DS_BT_RIGHT);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_Q     , SDL_KMOD_NONE), CS2_DS_BT_L1);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_E     , SDL_KMOD_NONE), CS2_DS_BT_R1);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_1     , SDL_KMOD_NONE), CS2_DS_BT_L2);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_3     , SDL_KMOD_NONE), CS2_DS_BT_R2);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_Z     , SDL_KMOD_NONE), CS2_DS_BT_L3);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_C     , SDL_KMOD_NONE), CS2_DS_BT_R3);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_I     , SDL_KMOD_NONE), CS2_DS_AX_LEFTV_POS);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_J     , SDL_KMOD_NONE), CS2_DS_AX_LEFTH_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_K     , SDL_KMOD_NONE), CS2_DS_AX_LEFTV_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_L     , SDL_KMOD_NONE), CS2_DS_AX_LEFTH_POS);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_T     , SDL_KMOD_NONE), CS2_DS_AX_RIGHTV_POS);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_F     , SDL_KMOD_NONE), CS2_DS_AX_RIGHTH_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_G     , SDL_KMOD_NONE), CS2_DS_AX_RIGHTV_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_H     , SDL_KMOD_NONE), CS2_DS_AX_RIGHTH_POS);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_0     , SDL_KMOD_NONE), CS2_S14X_SW_SERVICE);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_9     , SDL_KMOD_NONE), CS2_S14X_SW_TEST);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_8     , SDL_KMOD_NONE), CS2_S14X_SW_ENTER);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_7     , SDL_KMOD_NONE), CS2_S14X_SW_UP);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_6     , SDL_KMOD_NONE), CS2_S14X_SW_DOWN);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_1     , SDL_KMOD_LSHIFT), CS2_S14X_SW_P1_START);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_2     , SDL_KMOD_LSHIFT), CS2_S14X_SW_P2_START);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_3     , SDL_KMOD_LSHIFT), CS2_S14X_SW_P3_START);
+        map.map.insert(IEVENT(CS2_EVENT_KEYBOARD, SDLK_4     , SDL_KMOD_LSHIFT), CS2_S14X_SW_P4_START);
+
+        iris->input_maps.push_back(map);
+
+        map.map.clear();
+        map = {};
+
+        map.name = "Gamepad (default)";
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_SOUTH         , SDL_KMOD_NONE), CS2_DS_BT_CROSS);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_WEST          , SDL_KMOD_NONE), CS2_DS_BT_SQUARE);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_NORTH         , SDL_KMOD_NONE), CS2_DS_BT_TRIANGLE);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_EAST          , SDL_KMOD_NONE), CS2_DS_BT_CIRCLE);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_START         , SDL_KMOD_NONE), CS2_DS_BT_START);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_BACK          , SDL_KMOD_NONE), CS2_DS_BT_SELECT);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_DPAD_UP       , SDL_KMOD_NONE), CS2_DS_BT_UP);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_DPAD_DOWN     , SDL_KMOD_NONE), CS2_DS_BT_DOWN);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_DPAD_LEFT     , SDL_KMOD_NONE), CS2_DS_BT_LEFT);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_DPAD_RIGHT    , SDL_KMOD_NONE), CS2_DS_BT_RIGHT);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_LEFT_SHOULDER , SDL_KMOD_NONE), CS2_DS_BT_L1);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, SDL_KMOD_NONE), CS2_DS_BT_R1);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_LEFT_STICK    , SDL_KMOD_NONE), CS2_DS_BT_L3);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_BUTTON  , SDL_GAMEPAD_BUTTON_RIGHT_STICK   , SDL_KMOD_NONE), CS2_DS_BT_R3);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_LEFT_TRIGGER    , SDL_KMOD_NONE), CS2_DS_BT_L2);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER   , SDL_KMOD_NONE), CS2_DS_BT_R2);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_LEFTY           , SDL_KMOD_NONE), CS2_DS_AX_LEFTV_POS);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_NEG, SDL_GAMEPAD_AXIS_LEFTY           , SDL_KMOD_NONE), CS2_DS_AX_LEFTV_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_LEFTX           , SDL_KMOD_NONE), CS2_DS_AX_LEFTH_POS);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_NEG, SDL_GAMEPAD_AXIS_LEFTX           , SDL_KMOD_NONE), CS2_DS_AX_LEFTH_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_RIGHTY          , SDL_KMOD_NONE), CS2_DS_AX_RIGHTV_POS);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_NEG, SDL_GAMEPAD_AXIS_RIGHTY          , SDL_KMOD_NONE), CS2_DS_AX_RIGHTV_NEG);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_POS, SDL_GAMEPAD_AXIS_RIGHTX          , SDL_KMOD_NONE), CS2_DS_AX_RIGHTH_POS);
+        map.map.insert(IEVENT(CS2_EVENT_GAMEPAD_AXIS_NEG, SDL_GAMEPAD_AXIS_RIGHTX          , SDL_KMOD_NONE), CS2_DS_AX_RIGHTH_NEG);
+
+        iris->input_maps.push_back(map);
+    }
+
+#undef IEVENT
+
+    // Ensure default mappings are in the correct order
+    if (iris->input_maps[0].name == "Gamepad (default)") {
+        auto map = iris->input_maps[0];
+
+        iris->input_maps[0] = iris->input_maps[1];
+        iris->input_maps[1] = map;
+    }
+
+    // Use keyboard mapping for slot 0 and none for slot 1 by default
+    if (iris->input_map[0] <= 1) {
+        iris->input_map[0] = 0;
+    }
+
+    if (iris->input_map[1] <= 1) {
+        iris->input_map[1] = -1;
+    }
+
+    return true;
+}
+
+input_action* get_input_action(chuckstation2::instance* iris, int slot, uint64_t input) {
+    if (iris->input_map[slot] == -1)
+        return nullptr;
+
+    return iris->input_maps[iris->input_map[slot]].map.get_value(input);
+}
+
+static inline void change_button(chuckstation2::instance* iris, int slot, float value, uint32_t button) {
+    if (!iris->ds[slot]) return;
+
+    if (value > 0.5f) {
+        ds_button_press(iris->ds[slot], button);
+    } else {
+        ds_button_release(iris->ds[slot], button);
+    }
+}
+
+static inline void change_s14x_switch(chuckstation2::instance* iris, float value, uint32_t mask) {
+    if (!iris->ps2->s14x_ioboard)
+        return;
+
+    if (value > 0.5) {
+        s14x_ioboard_press_switch(iris->ps2->s14x_ioboard, mask);
+    } else {
+        s14x_ioboard_release_switch(iris->ps2->s14x_ioboard, mask);
+    }
+}
+
+void execute_action(chuckstation2::instance* iris, input_action action, int slot, float value) {
+    if (!iris->ds[slot])
+        return;
+
+    switch (action) {
+        case CS2_DS_BT_SELECT: change_button(iris, slot, value, DS_BT_SELECT); break;
+        case CS2_DS_BT_L3: change_button(iris, slot, value, DS_BT_L3); break;
+        case CS2_DS_BT_R3: change_button(iris, slot, value, DS_BT_R3); break;
+        case CS2_DS_BT_START: change_button(iris, slot, value, DS_BT_START); break;
+        case CS2_DS_BT_UP: change_button(iris, slot, value, DS_BT_UP); break;
+        case CS2_DS_BT_RIGHT: change_button(iris, slot, value, DS_BT_RIGHT); break;
+        case CS2_DS_BT_DOWN: change_button(iris, slot, value, DS_BT_DOWN); break;
+        case CS2_DS_BT_LEFT: change_button(iris, slot, value, DS_BT_LEFT); break;
+        case CS2_DS_BT_L2: change_button(iris, slot, value, DS_BT_L2); break;
+        case CS2_DS_BT_R2: change_button(iris, slot, value, DS_BT_R2); break;
+        case CS2_DS_BT_L1: change_button(iris, slot, value, DS_BT_L1); break;
+        case CS2_DS_BT_R1: change_button(iris, slot, value, DS_BT_R1); break;
+        case CS2_DS_BT_TRIANGLE: change_button(iris, slot, value, DS_BT_TRIANGLE); break;
+        case CS2_DS_BT_CIRCLE: change_button(iris, slot, value, DS_BT_CIRCLE); break;
+        case CS2_DS_BT_CROSS: change_button(iris, slot, value, DS_BT_CROSS); break;
+        case CS2_DS_BT_SQUARE: change_button(iris, slot, value, DS_BT_SQUARE); break;
+        case CS2_DS_BT_ANALOG: change_button(iris, slot, value, DS_BT_ANALOG); break;
+        case CS2_DS_AX_RIGHTV_POS: ds_analog_change(iris->ds[slot], DS_AX_RIGHT_V, 0x7f + (value * 0x80)); break;
+        case CS2_DS_AX_RIGHTV_NEG: ds_analog_change(iris->ds[slot], DS_AX_RIGHT_V, 0x7f - (value * 0x7f)); break;
+        case CS2_DS_AX_RIGHTH_POS: ds_analog_change(iris->ds[slot], DS_AX_RIGHT_H, 0x7f + (value * 0x80)); break;
+        case CS2_DS_AX_RIGHTH_NEG: ds_analog_change(iris->ds[slot], DS_AX_RIGHT_H, 0x7f - (value * 0x7f)); break;
+        case CS2_DS_AX_LEFTV_POS: ds_analog_change(iris->ds[slot], DS_AX_LEFT_V, 0x7f + (value * 0x80)); break;
+        case CS2_DS_AX_LEFTV_NEG: ds_analog_change(iris->ds[slot], DS_AX_LEFT_V, 0x7f - (value * 0x7f)); break;
+        case CS2_DS_AX_LEFTH_POS: ds_analog_change(iris->ds[slot], DS_AX_LEFT_H, 0x7f + (value * 0x80)); break;
+        case CS2_DS_AX_LEFTH_NEG: ds_analog_change(iris->ds[slot], DS_AX_LEFT_H, 0x7f - (value * 0x7f)); break;
+        case CS2_S14X_SW_SERVICE: change_s14x_switch(iris, value, S14X_IOBOARD_SW_SERVICE); break;
+        case CS2_S14X_SW_TEST: change_s14x_switch(iris, value, S14X_IOBOARD_SW_TEST); break;
+        case CS2_S14X_SW_ENTER: change_s14x_switch(iris, value, S14X_IOBOARD_SW_ENTER); break;
+        case CS2_S14X_SW_UP: change_s14x_switch(iris, value, S14X_IOBOARD_SW_UP); break;
+        case CS2_S14X_SW_DOWN: change_s14x_switch(iris, value, S14X_IOBOARD_SW_DOWN); break;
+        case CS2_S14X_SW_P1_START: change_s14x_switch(iris, value, S14X_IOBOARD_SW_P1_START); break;
+        case CS2_S14X_SW_P2_START: change_s14x_switch(iris, value, S14X_IOBOARD_SW_P2_START); break;
+        case CS2_S14X_SW_P3_START: change_s14x_switch(iris, value, S14X_IOBOARD_SW_P3_START); break;
+        case CS2_S14X_SW_P4_START: change_s14x_switch(iris, value, S14X_IOBOARD_SW_P4_START); break;
+    }
+}
+
+input_event sdl_event_to_input_event(SDL_Event* event) {
+    input_event ievent = {};
+
+    switch (event->type) {
+        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP: {
+            ievent.type = CS2_EVENT_KEYBOARD;
+            ievent.id = event->key.key;
+
+            // Devious hack, we have enough spare bits in the 
+            // SDL_Keycode so we can actually do this
+            const uint16_t mask =
+                SDL_KMOD_LSHIFT | SDL_KMOD_RSHIFT |
+                SDL_KMOD_LCTRL  | SDL_KMOD_RCTRL  |
+                SDL_KMOD_LALT   | SDL_KMOD_RALT;
+
+            ievent.id |= (event->key.mod & mask) << 12;
+        } break;
+
+        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+        case SDL_EVENT_GAMEPAD_BUTTON_UP: {
+            ievent.type = CS2_EVENT_GAMEPAD_BUTTON;
+            ievent.id = event->gbutton.button;
+        } break;
+
+        case SDL_EVENT_GAMEPAD_AXIS_MOTION: {
+            if (event->gaxis.value > 0) {
+                ievent.type = CS2_EVENT_GAMEPAD_AXIS_POS;
+            } else {
+                ievent.type = CS2_EVENT_GAMEPAD_AXIS_NEG;
+            }
+
+            ievent.id = event->gaxis.axis;
+        } break;
+    }
+
+    return ievent;
+}
+
+std::string get_default_screenshot_filename(chuckstation2::instance* iris) {
+    SDL_Time t;
+    SDL_DateTime dt;
+
+    SDL_GetCurrentTime(&t);
+    SDL_TimeToDateTime(t, &dt, true);
+
+    char buf[512];
+
+    sprintf(buf, "Screenshot-%04d-%02d-%02d_%02d-%02d-%02d-%d",
+            dt.year, dt.month, dt.day,
+            dt.hour, dt.minute, dt.second,
+            iris->screenshot_counter + 1
+    );
+
+    std::string str(buf);
+
+    switch (iris->screenshot_format) {
+        case CS2_SCREENSHOT_FORMAT_PNG: str += ".png"; break;
+        case CS2_SCREENSHOT_FORMAT_BMP: str += ".bmp"; break;
+        case CS2_SCREENSHOT_FORMAT_JPG: str += ".jpg"; break;
+        case CS2_SCREENSHOT_FORMAT_TGA: str += ".tga"; break;
+    }
+
+    return str;
+}
+
+int get_screenshot_jpg_quality(chuckstation2::instance* iris) {
+    switch (iris->screenshot_jpg_quality_mode) {
+        case CS2_SCREENSHOT_JPG_QUALITY_MINIMUM: return 1;
+        case CS2_SCREENSHOT_JPG_QUALITY_LOW:     return 25;
+        case CS2_SCREENSHOT_JPG_QUALITY_MEDIUM:  return 50;
+        case CS2_SCREENSHOT_JPG_QUALITY_HIGH:    return 90;
+        case CS2_SCREENSHOT_JPG_QUALITY_MAXIMUM: return 100;
+        case CS2_SCREENSHOT_JPG_QUALITY_CUSTOM: return iris->screenshot_jpg_quality;
+    }
+
+    return 90;
+}
+
+bool save_screenshot(chuckstation2::instance* iris, std::string path) {
+    std::filesystem::path fn(path);
+
+    std::string directory = iris->snap_path;
+    
+    if (iris->snap_path.empty()) {
+        directory = "snap";
+    }
+
+    std::filesystem::path p(directory);
+    std::string absolute_path;
+    std::string filename;
+
+    if (path.size()) {
+        filename = path;
+    } else {
+        filename = get_default_screenshot_filename(ChuckStation2);
+    }
+
+    if (p.is_absolute()) {
+        absolute_path = p.string();
+    } else {
+        absolute_path = iris->pref_path + p.string();
+    }
+
+    absolute_path += "/" + filename;
+
+    if (fn.is_absolute()) {
+        absolute_path = fn.string();
+    }
+
+    void* ptr = nullptr;
+    int width = 0, height = 0, offset = 0;
+
+    if (iris->screenshot_mode == CS2_SCREENSHOT_MODE_INTERNAL) {
+        renderer_image* image = iris->screenshot_shader_processing ? &iris->output_image : &iris->image;
+
+        ptr = vulkan::read_image(iris,
+            image->image,
+            image->format,
+            image->width,
+            image->height
+        );
+
+        width = image->width;
+        height = image->height;
+    } else {
+        ptr = vulkan::read_image(iris,
+            iris->main_window_data.Frames[0].Backbuffer,
+            iris->main_window_data.SurfaceFormat.format,
+            iris->main_window_data.Width,
+            iris->main_window_data.Height
+        );
+
+        width = iris->main_window_data.Width;
+        height = iris->main_window_data.Height;
+        
+        if (!iris->fullscreen) {
+            offset = iris->menubar_height;
+            height -= iris->menubar_height;
+        }
+    }
+
+    if (!ptr) {
+        push_info(iris, "Couldn't save screenshot");
+
+        return false;
+    }
+
+    uint32_t* buf = (uint32_t*)malloc((width * 4) * height);
+
+    memcpy(buf, ((uint32_t*)ptr) + offset * width, (width * 4) * height);
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            buf[x + (y * width)] |= 0xff000000;
+        }
+    }
+
+    int r = 0;
+
+    switch (iris->screenshot_format) {
+        case CS2_SCREENSHOT_FORMAT_PNG:
+            r = stbi_write_png(absolute_path.c_str(), width, height, 4, buf, width * 4);
+            break;
+        case CS2_SCREENSHOT_FORMAT_BMP:
+            r = stbi_write_bmp(absolute_path.c_str(), width, height, 4, buf);
+            break;
+        case CS2_SCREENSHOT_FORMAT_JPG:
+            r = stbi_write_jpg(absolute_path.c_str(), width, height, 4, buf, get_screenshot_jpg_quality(ChuckStation2));
+            break;
+        case CS2_SCREENSHOT_FORMAT_TGA:
+            r = stbi_write_tga(absolute_path.c_str(), width, height, 4, buf);
+            break;
+    }
+
+    printf("Saving screenshot to '%s' (%dx%d, %d bpp): %s\n",
+           absolute_path.c_str(), width, height, 32, r ? "Success" : "Failure"
+    );
+
+    free(ptr);
+    free(buf);
+
+    if (!r) {
+        push_info(iris, "Couldn't save screenshot");
+
+        return false;
+    }
+
+    iris->screenshot_counter++;
+
+    push_info(iris, "Screenshot saved as '" + filename + "'");
+
+    return true;
+}
+
+void handle_keydown_event(chuckstation2::instance* iris, SDL_Event* event) {
+    SDL_Keycode key = event->key.key;
+
+    switch (key) {
+        case SDLK_SPACE: {
+            iris->pause = !iris->pause;
+
+            // vulkan::wait_idle(ChuckStation2);
+        } break;
+        case SDLK_F9: {
+            vulkan::wait_idle(ChuckStation2);
+
+            bool saved = save_screenshot(ChuckStation2);
+        } break;
+        case SDLK_F11: {
+            iris->fullscreen = !iris->fullscreen;
+
+            SDL_SetWindowFullscreen(iris->window, iris->fullscreen ? true : false);
+        } break;
+        case SDLK_F1: {
+            printf("ps2: Sending poweroff signal\n");
+            ps2_cdvd_power_off(iris->ps2->cdvd);
+        } break;
+    }
+
+    iris->last_input_event_read = false;
+    iris->last_input_event_value = 1.0f;
+    iris->last_input_event = sdl_event_to_input_event(event);
+
+    if (iris->input_devices[0]) iris->input_devices[0]->handle_event(iris, event);
+    if (iris->input_devices[1]) iris->input_devices[1]->handle_event(iris, event);
+}
+
+void handle_keyup_event(chuckstation2::instance* iris, SDL_Event* event) {
+    // Add special keyup handling here if needed
+
+    if (iris->input_devices[0]) iris->input_devices[0]->handle_event(iris, event);
+    if (iris->input_devices[1]) iris->input_devices[1]->handle_event(iris, event);
+}
+
+}

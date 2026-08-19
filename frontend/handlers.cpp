@@ -1,0 +1,44 @@
+#include "chuckstation2.hpp"
+
+namespace chuckstation2 {
+
+void handle_ee_tty_event(void* udata, char c) {
+    chuckstation2::instance* iris = (chuckstation2::instance*)udata;
+
+    if (c == '\r')
+        return;
+
+    if (c == '\n') {
+        iris->ee_log.push_back("");
+    } else {
+        iris->ee_log.back().push_back(c);
+    }
+}
+
+void handle_iop_tty_event(void* udata, char c) {
+    chuckstation2::instance* iris = (chuckstation2::instance*)udata;
+
+    if (c == '\r')
+        return;
+
+    if (c == '\n') {
+        iris->iop_log.push_back("");
+    } else {
+        iris->iop_log.back().push_back(c);
+    }
+}
+
+void handle_sysmem_tty_event(void* udata, char c) {
+    chuckstation2::instance* iris = (chuckstation2::instance*)udata;
+
+    if (c == '\r')
+        return;
+
+    if (c == '\n') {
+        iris->sysmem_log.push_back("");
+    } else {
+        iris->sysmem_log.back().push_back(c);
+    }
+}
+
+}

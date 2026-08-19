@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="cs2_background">#1A1A2E</color>
+    <color name="cs2_surface">#16213E</color>
+    <color name="cs2_primary">#0F3460</color>
+    <color name="cs2_accent">#E94560</color>
+    <color name="cs2_text">#FFFFFF</color>
+    <color name="cs2_text_secondary">#A0A0B0</color>
+</resources>
