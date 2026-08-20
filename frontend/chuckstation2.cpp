@@ -56,7 +56,7 @@ int open_file(chuckstation2::instance* iris, std::string file) {
         if (!boot_file)
             return 2;
 
-        elf::load_symbols_from_disc(ChuckStation2);
+        elf::load_symbols_from_disc(iris);
 
         renderer_reset(iris->renderer);
 
@@ -178,10 +178,10 @@ void update_window(chuckstation2::instance* iris) {
 
     // Limit FPS to 60 only when paused
     if (iris->limit_fps && iris->pause)
-        sleep_limiter(ChuckStation2);
+        sleep_limiter(iris);
 
-    update_title(ChuckStation2);
-    update_time(ChuckStation2);
+    update_title(iris);
+    update_time(iris);
 
     ImGuiIO& io = ImGui::GetIO();
 
@@ -222,7 +222,7 @@ void update_window(chuckstation2::instance* iris) {
     ImGui::NewFrame();
 
     if (!iris->fullscreen) {
-        show_main_menubar(ChuckStation2);
+        show_main_menubar(iris);
     }
 
     DockSpaceOverViewport(0, GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
@@ -276,35 +276,35 @@ void update_window(chuckstation2::instance* iris) {
         );
     }
 
-    if (iris->show_ee_control) show_ee_control(ChuckStation2);
-    if (iris->show_ee_state) show_ee_state(ChuckStation2);
-    if (iris->show_ee_logs) show_ee_logs(ChuckStation2);
-    if (iris->show_ee_interrupts) show_ee_interrupts(ChuckStation2);
-    if (iris->show_ee_dmac) show_ee_dmac(ChuckStation2);
-    if (iris->show_iop_control) show_iop_control(ChuckStation2);
-    if (iris->show_iop_state) show_iop_state(ChuckStation2);
-    if (iris->show_iop_logs) show_iop_logs(ChuckStation2);
-    if (iris->show_iop_interrupts) show_iop_interrupts(ChuckStation2);
-    if (iris->show_iop_modules) show_iop_modules(ChuckStation2);
-    if (iris->show_iop_dma) show_iop_dma(ChuckStation2);
-    if (iris->show_gs_debugger) show_gs_debugger(ChuckStation2);
-    if (iris->show_spu2_debugger) show_spu2_debugger(ChuckStation2);
-    if (iris->show_memory_viewer) show_memory_viewer(ChuckStation2);
-    if (iris->show_vu_disassembler) show_vu_disassembler(ChuckStation2);
-    if (iris->show_status_bar && !iris->fullscreen) show_status_bar(ChuckStation2);
-    if (iris->show_breakpoints) show_breakpoints(ChuckStation2);
-    if (iris->show_about_window) show_about_window(ChuckStation2);
-    if (iris->show_settings) show_settings(ChuckStation2);
-    if (iris->show_pad_debugger) show_pad_debugger(ChuckStation2);
-    if (iris->show_symbols) show_symbols(ChuckStation2);
-    if (iris->show_threads) show_threads(ChuckStation2);
-    if (iris->show_sysmem_logs) show_sysmem_logs(ChuckStation2);
-    if (iris->show_memory_card_tool) show_memory_card_tool(ChuckStation2);
-    if (iris->show_memory_search) show_memory_search(ChuckStation2);
-    // if (iris->show_gamelist) show_gamelist(ChuckStation2);
+    if (iris->show_ee_control) show_ee_control(iris);
+    if (iris->show_ee_state) show_ee_state(iris);
+    if (iris->show_ee_logs) show_ee_logs(iris);
+    if (iris->show_ee_interrupts) show_ee_interrupts(iris);
+    if (iris->show_ee_dmac) show_ee_dmac(iris);
+    if (iris->show_iop_control) show_iop_control(iris);
+    if (iris->show_iop_state) show_iop_state(iris);
+    if (iris->show_iop_logs) show_iop_logs(iris);
+    if (iris->show_iop_interrupts) show_iop_interrupts(iris);
+    if (iris->show_iop_modules) show_iop_modules(iris);
+    if (iris->show_iop_dma) show_iop_dma(iris);
+    if (iris->show_gs_debugger) show_gs_debugger(iris);
+    if (iris->show_spu2_debugger) show_spu2_debugger(iris);
+    if (iris->show_memory_viewer) show_memory_viewer(iris);
+    if (iris->show_vu_disassembler) show_vu_disassembler(iris);
+    if (iris->show_status_bar && !iris->fullscreen) show_status_bar(iris);
+    if (iris->show_breakpoints) show_breakpoints(iris);
+    if (iris->show_about_window) show_about_window(iris);
+    if (iris->show_settings) show_settings(iris);
+    if (iris->show_pad_debugger) show_pad_debugger(iris);
+    if (iris->show_symbols) show_symbols(iris);
+    if (iris->show_threads) show_threads(iris);
+    if (iris->show_sysmem_logs) show_sysmem_logs(iris);
+    if (iris->show_memory_card_tool) show_memory_card_tool(iris);
+    if (iris->show_memory_search) show_memory_search(iris);
+    // if (iris->show_gamelist) show_gamelist(iris);
     if (iris->show_imgui_demo) ShowDemoWindow(&iris->show_imgui_demo);
-    if (iris->show_bios_setting_window) show_bios_setting_window(ChuckStation2);
-    if (iris->show_overlay) show_overlay(ChuckStation2);
+    if (iris->show_bios_setting_window) show_bios_setting_window(iris);
+    if (iris->show_overlay) show_overlay(iris);
 
     // Display little pause icon in the top right corner
     if (iris->pause) {
@@ -333,7 +333,7 @@ void update_window(chuckstation2::instance* iris) {
         );
     }
 
-    handle_animations(ChuckStation2);
+    handle_animations(iris);
 
     // Rendering
     ImGui::Render();
@@ -381,7 +381,7 @@ bool init(chuckstation2::instance* iris, int argc, const char* argv[]) {
         SDL_free(pref);
     }
 
-    if (!chuckstation2::emu::init(ChuckStation2)) {
+    if (!chuckstation2::emu::init(iris)) {
         fprintf(stderr, "ChuckStation2: Failed to initialize emulator state\n");
 
         return false;
@@ -412,31 +412,31 @@ bool init(chuckstation2::instance* iris, int argc, const char* argv[]) {
         return false;
     }
 
-    if (!chuckstation2::imgui::init(ChuckStation2)) {
+    if (!chuckstation2::imgui::init(iris)) {
         fprintf(stderr, "ChuckStation2: Failed to initialize ImGui\n");
 
         return false;
     }
 
-    if (!chuckstation2::platform::init(ChuckStation2)) {
+    if (!chuckstation2::platform::init(iris)) {
         fprintf(stderr, "ChuckStation2: Failed to initialize platform\n");
 
         return false;
     }
 
-    if (!chuckstation2::audio::init(ChuckStation2)) {
+    if (!chuckstation2::audio::init(iris)) {
         fprintf(stderr, "ChuckStation2: Failed to initialize audio\n");
 
         return false;
     }
 
-    if (!chuckstation2::render::init(ChuckStation2)) {
+    if (!chuckstation2::render::init(iris)) {
         fprintf(stderr, "ChuckStation2: Failed to initialize render state\n");
 
         return false;
     }
 
-    if (!chuckstation2::input::init(ChuckStation2)) {
+    if (!chuckstation2::input::init(iris)) {
         fprintf(stderr, "ChuckStation2: Failed to initialize input\n");
 
         return false;
@@ -461,7 +461,7 @@ bool init(chuckstation2::instance* iris, int argc, const char* argv[]) {
         ImGui::RenderPlatformWindowsDefault();
     }
 
-    SDL_SetWindowSize(iris->window, iris->window_width, iris->window_height + get_menubar_height(ChuckStation2));
+    SDL_SetWindowSize(iris->window, iris->window_width, iris->window_height + get_menubar_height(iris));
     SDL_ShowWindow(iris->window);
 
     return true;
@@ -482,31 +482,31 @@ SDL_AppResult update(chuckstation2::instance* iris) {
             iris->step = false;
         }
 
-        chuckstation2::update_window(ChuckStation2);
+        chuckstation2::update_window(iris);
 
         return SDL_APP_CONTINUE;
     }
 
     // Execute until VBlank
     while (!ps2_gs_is_vblank(iris->ps2->gs)) {
-        do_cycle(ChuckStation2);
+        do_cycle(iris);
 
         if (iris->pause) {
-            chuckstation2::update_window(ChuckStation2);
+            chuckstation2::update_window(iris);
 
             return SDL_APP_CONTINUE;
         }
     }
 
     // Draw frame
-    chuckstation2::update_window(ChuckStation2);
+    chuckstation2::update_window(iris);
     
     // Execute until vblank is over
     while (ps2_gs_is_vblank(iris->ps2->gs)) {
-        do_cycle(ChuckStation2);
+        do_cycle(iris);
 
         if (iris->pause) {
-            chuckstation2::update_window(ChuckStation2);
+            chuckstation2::update_window(iris);
 
             return SDL_APP_CONTINUE;
         }
@@ -727,19 +727,19 @@ void destroy(chuckstation2::instance* iris) {
 
     if (iris->window) SDL_HideWindow(iris->window);
 
-    chuckstation2::imgui::cleanup(ChuckStation2);
-    chuckstation2::audio::close(ChuckStation2);
-    chuckstation2::settings::close(ChuckStation2);
-    chuckstation2::render::destroy(ChuckStation2);
-    chuckstation2::vulkan::cleanup(ChuckStation2);
-    chuckstation2::platform::destroy(ChuckStation2);
-    chuckstation2::emu::destroy(ChuckStation2);
+    chuckstation2::imgui::cleanup(iris);
+    chuckstation2::audio::close(iris);
+    chuckstation2::settings::close(iris);
+    chuckstation2::render::destroy(iris);
+    chuckstation2::vulkan::cleanup(iris);
+    chuckstation2::platform::destroy(iris);
+    chuckstation2::emu::destroy(iris);
 
     if (iris->window) SDL_DestroyWindow(iris->window);
 
     SDL_Quit();
 
-    delete ChuckStation2;
+    delete iris;
 }
 
 }

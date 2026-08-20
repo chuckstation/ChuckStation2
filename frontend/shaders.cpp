@@ -20,7 +20,7 @@ namespace chuckstation2::shaders {
 
 bool pass::init(chuckstation2::instance* iris, const void* data, size_t size, std::string id) {
     m_vert_shader = iris->default_vert_shader;
-    m_iris = ChuckStation2;
+    m_iris = iris;
     m_id = id;
 
     VkShaderModuleCreateInfo create_info = {};

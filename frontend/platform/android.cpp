@@ -154,7 +154,9 @@ bool init(chuckstation2::instance* iris) {
     }
 
     // Configure SDL hints for Android
-    SDL_SetHint(SDL_HINT_ACCELEROMETER_AS_JOYSTICK, "0");
+#ifdef SDL_HINT_ACCELEROMETER_AS_JOYSTICK
+    SDL_SetHint("SDL_ACCELEROMETER_AS_JOYSTICK", "0");
+#endif
 
     // Apply Android-specific settings
     apply_settings(iris);
@@ -209,16 +211,6 @@ void destroy(chuckstation2::instance* iris) {
 
 extern "C" {
 
-JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    g_jvm = vm;
-    LOGI("ChuckStation2 native library loaded");
-    return JNI_VERSION_1_6;
-}
-
-JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* reserved) {
-    g_jvm = nullptr;
-    LOGI("ChuckStation2 native library unloaded");
-}
 
 JNIEXPORT void JNICALL
 Java_com_chuckstation_ChuckStation2_ChuckStation2Activity_nativeInit(JNIEnv* env, jobject thiz) {

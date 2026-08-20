@@ -32,7 +32,7 @@ bool init(chuckstation2::instance* iris) {
     spec.format = SDL_AUDIO_S16;
     spec.freq = 48000;
 
-    iris->stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, chuckstation2::audio::update, ChuckStation2);
+    iris->stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, chuckstation2::audio::update, iris);
 
     if (!iris->stream) {
         fprintf(stderr, "audio: Failed to open audio device\n");

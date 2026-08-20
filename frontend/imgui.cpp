@@ -140,7 +140,7 @@ void set_vsync(chuckstation2::instance* iris, bool vsync) {
         present_modes.size()
     );
 
-    render::refresh(ChuckStation2);
+    render::refresh(iris);
 }
 
 bool setup_fonts(chuckstation2::instance* iris, ImGuiIO& io) {
@@ -447,9 +447,7 @@ void set_theme(chuckstation2::instance* iris, int theme, bool set_bg_color) {
     pstyle.PlotPadding = ImVec2(0.0f, 0.0f);
     pstyle.LegendPadding = ImVec2(0.0f, 0.0f);
     pstyle.LegendInnerPadding = ImVec2(0.0f, 0.0f);
-    pstyle.LineWeight = 2.0f;
 
-    pstyle.Colors[ImPlotCol_Line]       = ImVec4(0.0f, 1.0f, 0.2f, 1.0f);
     pstyle.Colors[ImPlotCol_FrameBg]    = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
     pstyle.Colors[ImPlotCol_PlotBg]     = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
 }
@@ -831,7 +829,7 @@ bool init(chuckstation2::instance* iris) {
         return false;
     }
 
-    auto load_texture = [ChuckStation2](const stbi_uc* data, size_t size) -> texture {
+    auto load_texture = [iris](const stbi_uc* data, size_t size) -> texture {
         int x, y, c;
 
         stbi_uc* buf = stbi_load_from_memory(data, size, &x, &y, &c, 4);
@@ -853,7 +851,7 @@ bool init(chuckstation2::instance* iris) {
 }
 
 void cleanup(chuckstation2::instance* iris) {
-    vulkan::wait_idle(ChuckStation2);
+    vulkan::wait_idle(iris);
 
     vulkan::free_texture(iris, iris->ps1_memory_card_icon);
     vulkan::free_texture(iris, iris->ps2_memory_card_icon);

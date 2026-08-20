@@ -98,7 +98,7 @@ endif()
 
 # ARM NEON for Android ARM64 and Apple Silicon
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-    target_compile_options(ChuckStation2 PRIVATE -D_EE_USE_INTRINSICS)
+    # x86 SSE intrinsics in src/ee/ are not yet converted to ARM NEON, so disable _EE_USE_INTRINSICS for ARM targets
 endif()
 
 # ============================================================
@@ -106,6 +106,7 @@ endif()
 # ============================================================
 
 set(PARALLEL_GS_STANDALONE ON CACHE BOOL "" FORCE)
+set(GRANITE_PLATFORM "null" CACHE STRING "" FORCE)
 add_subdirectory(deps/asmjit EXCLUDE_FROM_ALL)
 add_subdirectory(deps/tomlplusplus EXCLUDE_FROM_ALL)
 add_subdirectory(deps/libdeflate EXCLUDE_FROM_ALL)

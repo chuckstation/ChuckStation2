@@ -309,7 +309,7 @@ void show_hardware_renderer_settings(chuckstation2::instance* iris) {
                     iris->hardware_backend_config.force_progressive = true;
                 }
 
-                render::refresh(ChuckStation2);
+                render::refresh(iris);
             }
         }
 
@@ -319,12 +319,12 @@ void show_hardware_renderer_settings(chuckstation2::instance* iris) {
     PushStyleVarY(ImGuiStyleVar_FramePadding, 2.0F);
     // BeginDisabled(iris->hardware_backend_config.super_sampling != 0);
     if (Checkbox(" Force progressive scan", &iris->hardware_backend_config.force_progressive)) {
-        render::refresh(ChuckStation2);
+        render::refresh(iris);
     }
     // EndDisabled();
 
     if (Checkbox(" Overscan", &iris->hardware_backend_config.overscan)) {
-        render::refresh(ChuckStation2);
+        render::refresh(iris);
     }
     PopStyleVar();
 
@@ -332,23 +332,23 @@ void show_hardware_renderer_settings(chuckstation2::instance* iris) {
 
     PushStyleVarY(ImGuiStyleVar_FramePadding, 2.0F);
     if (Checkbox(" CRTC Offsets", &iris->hardware_backend_config.crtc_offsets)) {
-        render::refresh(ChuckStation2);
+        render::refresh(iris);
     }
 
     if (Checkbox(" Disable Mipmaps", &iris->hardware_backend_config.disable_mipmaps)) {
-        render::refresh(ChuckStation2);
+        render::refresh(iris);
     }
 
     if (Checkbox(" Unsynced Readbacks", &iris->hardware_backend_config.unsynced_readbacks)) {
-        render::refresh(ChuckStation2);
+        render::refresh(iris);
     }
 
     if (Checkbox(" Backbuffer Promotion", &iris->hardware_backend_config.backbuffer_promotion)) {
-        render::refresh(ChuckStation2);
+        render::refresh(iris);
     }
 
     if (Checkbox(" Allow Blend Demote", &iris->hardware_backend_config.allow_blend_demote)) {
-        render::refresh(ChuckStation2);
+        render::refresh(iris);
     }
     PopStyleVar();
 }
@@ -478,7 +478,7 @@ void show_graphics_settings(chuckstation2::instance* iris) {
     if (iris->renderer_backend == RENDERER_BACKEND_HARDWARE) {
         SeparatorText("Renderer settings");
 
-        show_hardware_renderer_settings(ChuckStation2);
+        show_hardware_renderer_settings(iris);
     }
 
     SeparatorText("Vulkan settings");
@@ -727,7 +727,7 @@ void show_mappings_editor(chuckstation2::instance* iris) {
     SameLine();
 
     if (Button(ICON_MS_FOLDER "##gcdbbtn")) {
-        audio::mute(ChuckStation2);
+        audio::mute(iris);
 
         auto f = pfd::open_file("Select Game controller DB file", "", {
             "Game controller DB (*.txt)", "*.txt",
@@ -736,7 +736,7 @@ void show_mappings_editor(chuckstation2::instance* iris) {
 
         while (!f.ready());
 
-        audio::unmute(ChuckStation2);
+        audio::unmute(iris);
 
         if (f.result().size()) {
             strncpy(buf, f.result().at(0).c_str(), 1024);
@@ -753,7 +753,7 @@ void show_mappings_editor(chuckstation2::instance* iris) {
 
         memset(buf, 0, 1024);
 
-        input::load_db_default(ChuckStation2);
+        input::load_db_default(iris);
     }
 
     Text("Mapping");
@@ -892,7 +892,7 @@ void show_input_settings(chuckstation2::instance* iris) {
         }
 
         if (BeginTabItem("Mappings")) {
-            show_mappings_editor(ChuckStation2);
+            show_mappings_editor(iris);
 
             EndTabItem();
         }
@@ -930,7 +930,7 @@ void show_paths_settings(chuckstation2::instance* iris) {
     SameLine();
 
     if (Button(ICON_MS_FOLDER "##rom0")) {
-        audio::mute(ChuckStation2);
+        audio::mute(iris);
 
         auto f = pfd::open_file("Select BIOS file", "", {
             "BIOS dumps (*.bin; *.rom0)", "*.bin *.rom0",
@@ -939,7 +939,7 @@ void show_paths_settings(chuckstation2::instance* iris) {
 
         while (!f.ready());
 
-        audio::unmute(ChuckStation2);
+        audio::unmute(iris);
 
         if (f.result().size()) {
             strncpy(buf, f.result().at(0).c_str(), 512);
@@ -989,7 +989,7 @@ void show_paths_settings(chuckstation2::instance* iris) {
     SameLine();
 
     if (Button(ICON_MS_FOLDER "##rom1")) {
-        audio::mute(ChuckStation2);
+        audio::mute(iris);
 
         auto f = pfd::open_file("Select DVD BIOS file", "", {
             "DVD BIOS dumps (*.bin; *.rom1)", "*.bin *.rom1",
@@ -998,7 +998,7 @@ void show_paths_settings(chuckstation2::instance* iris) {
 
         while (!f.ready());
 
-        audio::unmute(ChuckStation2);
+        audio::unmute(iris);
 
         if (f.result().size()) {
             strncpy(dvd_buf, f.result().at(0).c_str(), 512);
@@ -1044,7 +1044,7 @@ void show_paths_settings(chuckstation2::instance* iris) {
     SameLine();
 
     if (Button(ICON_MS_FOLDER "##rom2")) {
-        audio::mute(ChuckStation2);
+        audio::mute(iris);
 
         auto f = pfd::open_file("Select ROM2 file", "", {
             "ROM2 dumps (*.bin; *.rom2)", "*.bin *.rom2",
@@ -1053,7 +1053,7 @@ void show_paths_settings(chuckstation2::instance* iris) {
 
         while (!f.ready());
 
-        audio::unmute(ChuckStation2);
+        audio::unmute(iris);
 
         if (f.result().size()) {
             strncpy(rom2_buf, f.result().at(0).c_str(), 512);
@@ -1074,7 +1074,7 @@ void show_paths_settings(chuckstation2::instance* iris) {
     SameLine();
 
     if (Button(ICON_MS_FOLDER "##nvram")) {
-        audio::mute(ChuckStation2);
+        audio::mute(iris);
 
         auto f = pfd::open_file("Select NVRAM file", "", {
             "NVRAM dumps (*.nvm; *.bin)", "*.nvm *.bin",
@@ -1083,7 +1083,7 @@ void show_paths_settings(chuckstation2::instance* iris) {
 
         while (!f.ready());
 
-        audio::unmute(ChuckStation2);
+        audio::unmute(iris);
 
         if (f.result().size()) {
             strncpy(nvram_buf, f.result().at(0).c_str(), 512);
@@ -1104,7 +1104,7 @@ void show_paths_settings(chuckstation2::instance* iris) {
     SameLine();
 
     if (Button(ICON_MS_FOLDER "##flash")) {
-        audio::mute(ChuckStation2);
+        audio::mute(iris);
 
         auto f = pfd::open_file("Select Flash/XFROM dump file", "", {
             "XFROM dumps (*.bin)", "*.bin",
@@ -1113,7 +1113,7 @@ void show_paths_settings(chuckstation2::instance* iris) {
 
         while (!f.ready());
 
-        audio::unmute(ChuckStation2);
+        audio::unmute(iris);
 
         if (f.result().size()) {
             strncpy(flash_buf, f.result().at(0).c_str(), 512);
@@ -1219,7 +1219,7 @@ void show_memory_card(chuckstation2::instance* iris, int slot) {
         SameLine();
 
         if (Button(bt_label)) {
-            audio::mute(ChuckStation2);
+            audio::mute(iris);
 
             auto f = pfd::open_file("Select Memory Card file for Slot 1", iris->pref_path, {
                 "Memory Card files (*.ps2; *.mcd; *.bin; *.psm; *.pocket)", "*.ps2 *.mcd *.bin *.psm *.pocket",
@@ -1228,7 +1228,7 @@ void show_memory_card(chuckstation2::instance* iris, int slot) {
 
             while (!f.ready());
 
-            audio::unmute(ChuckStation2);
+            audio::unmute(iris);
 
             if (f.result().size()) {
                 strncpy(buf, f.result().at(0).c_str(), 512);
@@ -1308,7 +1308,7 @@ void show_misc_settings(chuckstation2::instance* iris) {
                 iris->theme = i;
 
                 imgui::set_theme(iris, i);
-                platform::apply_settings(ChuckStation2);
+                platform::apply_settings(iris);
             }
         }
 
@@ -1339,7 +1339,7 @@ void show_misc_settings(chuckstation2::instance* iris) {
             if (Selectable(titlebar_style_names[i], iris->windows_titlebar_style == i)) {
                 iris->windows_titlebar_style = i;
 
-                platform::apply_settings(ChuckStation2);
+                platform::apply_settings(iris);
             }
         }
 
@@ -1350,12 +1350,12 @@ void show_misc_settings(chuckstation2::instance* iris) {
 
     BeginDisabled(iris->windows_titlebar_style != CS2_TITLEBAR_DEFAULT);
     if (Checkbox(" Immersive dark mode", &iris->windows_dark_mode)) {
-        platform::apply_settings(ChuckStation2);
+        platform::apply_settings(iris);
     }
     EndDisabled();
 
     if (Checkbox(" Show window borders", &iris->windows_enable_borders)) {
-        platform::apply_settings(ChuckStation2);
+        platform::apply_settings(iris);
     }
 
     PopStyleVar();
@@ -1522,7 +1522,7 @@ void show_shader_settings(chuckstation2::instance* iris) {
     } SameLine();
 
     if (Button(ICON_MS_REMOVE_SELECTION)) {
-        shaders::clear(ChuckStation2);
+        shaders::clear(iris);
     }
 
     // Text("Preset");
@@ -1538,7 +1538,7 @@ void show_shader_settings(chuckstation2::instance* iris) {
     // }
 
     if (BeginTable("##shaders", 1, ImGuiTableFlags_SizingFixedSame | ImGuiTableFlags_RowBg)) {
-        for (int i = 0; i < shaders::count(ChuckStation2); i++) {
+        for (int i = 0; i < shaders::count(iris); i++) {
             TableNextRow();
 
             char bypass[16];
@@ -1620,13 +1620,13 @@ void show_settings(chuckstation2::instance* iris) {
 
         if (BeginChild("##content", ImVec2(0, GetContentRegionAvail().y), ImGuiChildFlags_AutoResizeY)) {
             switch (selected_settings) {
-                case 0: show_system_settings(ChuckStation2); break;
-                case 1: show_paths_settings(ChuckStation2); break;
-                case 2: show_graphics_settings(ChuckStation2); break;
-                case 3: show_shader_settings(ChuckStation2); break;
-                case 4: show_input_settings(ChuckStation2); break;
-                case 5: show_memory_card_settings(ChuckStation2); break;
-                case 6: show_misc_settings(ChuckStation2); break;
+                case 0: show_system_settings(iris); break;
+                case 1: show_paths_settings(iris); break;
+                case 2: show_graphics_settings(iris); break;
+                case 3: show_shader_settings(iris); break;
+                case 4: show_input_settings(iris); break;
+                case 5: show_memory_card_settings(iris); break;
+                case 6: show_misc_settings(iris); break;
             }
         } EndChild();
 

@@ -527,7 +527,7 @@ texture upload_texture(chuckstation2::instance* iris, void* pixels, int width, i
 
     VkDeviceMemory staging_buffer_memory = VK_NULL_HANDLE;
     VkBuffer staging_buffer = create_buffer(
-        ChuckStation2,
+        iris,
         tex.image_size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -831,15 +831,15 @@ bool init(chuckstation2::instance* iris, bool enable_validation) {
     volkLoadInstance(iris->instance);
 
     // Find a suitable Vulkan physical device (GPU)
-    enumerate_physical_devices(ChuckStation2);
+    enumerate_physical_devices(iris);
 
     iris->vulkan_selected_device_index = 0;
 
     if (iris->vulkan_physical_device < 0) {
-        iris->physical_device = find_suitable_physical_device(ChuckStation2);
+        iris->physical_device = find_suitable_physical_device(iris);
     } else {
         if (iris->vulkan_physical_device >= iris->vulkan_gpus.size()) {
-            iris->physical_device = find_suitable_physical_device(ChuckStation2);
+            iris->physical_device = find_suitable_physical_device(iris);
             iris->vulkan_physical_device = iris->vulkan_selected_device_index;
         } else {
             iris->physical_device = iris->vulkan_gpus[iris->vulkan_physical_device].device;
@@ -865,11 +865,11 @@ bool init(chuckstation2::instance* iris, bool enable_validation) {
         properties.driverVersion
     );
 
-    iris->device_extensions = get_device_extensions(ChuckStation2);
-    iris->device_layers = get_device_layers(ChuckStation2);
+    iris->device_extensions = get_device_extensions(iris);
+    iris->device_layers = get_device_layers(iris);
 
     // Find a graphics-capable queue family
-    int queue_family = find_graphics_queue_family_index(ChuckStation2);
+    int queue_family = find_graphics_queue_family_index(iris);
 
     if (queue_family == -1) {
         fprintf(stderr, "vulkan: Failed to find a graphics-capable queue family\n");
@@ -970,7 +970,7 @@ bool init(chuckstation2::instance* iris, bool enable_validation) {
     VkDeviceSize index_buffer_size = sizeof(uint16_t) * iris->indices.size();
 
     iris->index_buffer = create_buffer(
-        ChuckStation2,
+        iris,
         sizeof(uint16_t) * iris->indices.size(),
         VK_BUFFER_USAGE_TRANSFER_DST_BIT |
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
@@ -979,7 +979,7 @@ bool init(chuckstation2::instance* iris, bool enable_validation) {
     );
 
     VkBuffer index_staging_buffer = create_buffer(
-        ChuckStation2,
+        iris,
         index_buffer_size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -991,7 +991,7 @@ bool init(chuckstation2::instance* iris, bool enable_validation) {
     copy_buffer(iris, index_staging_buffer, iris->index_buffer, index_buffer_size);
 
     iris->vertex_buffer = create_buffer(
-        ChuckStation2,
+        iris,
         iris->vertex_buffer_size,
         VK_BUFFER_USAGE_TRANSFER_DST_BIT |
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -1000,7 +1000,7 @@ bool init(chuckstation2::instance* iris, bool enable_validation) {
     );
 
     iris->vertex_staging_buffer = create_buffer(
-        ChuckStation2,
+        iris,
         iris->vertex_buffer_size,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -1012,7 +1012,7 @@ bool init(chuckstation2::instance* iris, bool enable_validation) {
     vkFreeMemory(iris->device, index_staging_buffer_memory, nullptr);
     vkDestroyBuffer(iris->device, index_staging_buffer, nullptr);
 
-    create_descriptor_pool(ChuckStation2);
+    create_descriptor_pool(iris);
 
     return true;
 }
@@ -1020,7 +1020,7 @@ bool init(chuckstation2::instance* iris, bool enable_validation) {
 static int ic = 0;
 
 void cleanup(chuckstation2::instance* iris) {
-    vulkan::wait_idle(ChuckStation2);
+    vulkan::wait_idle(iris);
 
     if (iris->descriptor_set_layout) vkDestroyDescriptorSetLayout(iris->device, iris->descriptor_set_layout, nullptr);
     if (iris->descriptor_pool) vkDestroyDescriptorPool(iris->device, iris->descriptor_pool, nullptr);

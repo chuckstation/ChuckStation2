@@ -422,7 +422,7 @@ void show_gs_registers(chuckstation2::instance* iris) {
     if (BeginChild("##gsr")) {
         switch (gs_context) {
             case 0: {
-                show_privileged_registers(ChuckStation2);
+                show_privileged_registers(iris);
             } break;
 
             case 1: {
@@ -434,7 +434,7 @@ void show_gs_registers(chuckstation2::instance* iris) {
             } break;
 
             case 3: {
-                show_internal_registers(ChuckStation2);
+                show_internal_registers(iris);
             } break;
         }
     } EndChild();
@@ -658,15 +658,15 @@ void show_gs_debugger(chuckstation2::instance* iris) {
         if (BeginChild("##gschild")) {
             switch (gs_debug_index) {
                 case 0: {
-                    show_gs_registers(ChuckStation2);
+                    show_gs_registers(iris);
                 } break;
 
                 case 3: {
-                    show_gs_queue(ChuckStation2);
+                    show_gs_queue(iris);
                 } break;
 
                 case 4: {
-                    show_gs_memory(ChuckStation2);
+                    show_gs_memory(iris);
                 } break;
             }
         } EndChild();

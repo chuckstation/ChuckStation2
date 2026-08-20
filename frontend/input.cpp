@@ -141,7 +141,7 @@ bool init(chuckstation2::instance* iris) {
     if (!iris->gcdb_path.size()) {
         fprintf(stdout, "input: Adding default database\n");
 
-        load_db_default(ChuckStation2);
+        load_db_default(iris);
     } else {
         fprintf(stdout, "input: Adding database from file \'%s\'\n", iris->gcdb_path.c_str());
 
@@ -409,7 +409,7 @@ bool save_screenshot(chuckstation2::instance* iris, std::string path) {
     if (path.size()) {
         filename = path;
     } else {
-        filename = get_default_screenshot_filename(ChuckStation2);
+        filename = get_default_screenshot_filename(iris);
     }
 
     if (p.is_absolute()) {
@@ -482,7 +482,7 @@ bool save_screenshot(chuckstation2::instance* iris, std::string path) {
             r = stbi_write_bmp(absolute_path.c_str(), width, height, 4, buf);
             break;
         case CS2_SCREENSHOT_FORMAT_JPG:
-            r = stbi_write_jpg(absolute_path.c_str(), width, height, 4, buf, get_screenshot_jpg_quality(ChuckStation2));
+            r = stbi_write_jpg(absolute_path.c_str(), width, height, 4, buf, get_screenshot_jpg_quality(iris));
             break;
         case CS2_SCREENSHOT_FORMAT_TGA:
             r = stbi_write_tga(absolute_path.c_str(), width, height, 4, buf);
@@ -516,12 +516,12 @@ void handle_keydown_event(chuckstation2::instance* iris, SDL_Event* event) {
         case SDLK_SPACE: {
             iris->pause = !iris->pause;
 
-            // vulkan::wait_idle(ChuckStation2);
+            // vulkan::wait_idle(iris);
         } break;
         case SDLK_F9: {
-            vulkan::wait_idle(ChuckStation2);
+            vulkan::wait_idle(iris);
 
-            bool saved = save_screenshot(ChuckStation2);
+            bool saved = save_screenshot(iris);
         } break;
         case SDLK_F11: {
             iris->fullscreen = !iris->fullscreen;

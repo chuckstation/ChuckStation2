@@ -54,7 +54,7 @@ void show_main_menubar(chuckstation2::instance* iris) {
 
         if (BeginMenu("ChuckStation2")) {
             if (MenuItem(ICON_MS_DRIVE_FILE_MOVE " Open...")) {
-                audio::mute(ChuckStation2);
+                audio::mute(iris);
 
                 auto f = pfd::open_file("Select a file to load", "", {
                     "All File Types (*.iso; *.bin; *.cue; *.chd; *.cso; *.zso; *.elf)", "*.iso *.bin *.cue *.chd *.cso *.zso *.elf",
@@ -72,7 +72,7 @@ void show_main_menubar(chuckstation2::instance* iris) {
 
                 while (!f.ready());
 
-                audio::unmute(ChuckStation2);
+                audio::unmute(iris);
 
                 if (f.result().size()) {
                     std::string path = f.result().at(0);
@@ -125,13 +125,13 @@ void show_main_menubar(chuckstation2::instance* iris) {
             }
 
             if (MenuItem(ICON_MS_JOYSTICK " Open Arcade...")) {
-                audio::mute(ChuckStation2);
+                audio::mute(iris);
 
                 auto f = pfd::select_folder("Select arcade game folder", "", pfd::opt::none);
 
                 while (!f.ready());
 
-                audio::unmute(ChuckStation2);
+                audio::unmute(iris);
 
                 if (f.result().size()) {
                     std::string path = f.result();
@@ -236,7 +236,7 @@ void show_main_menubar(chuckstation2::instance* iris) {
             }
 
             if (MenuItem(ICON_MS_FOLDER " Change disc...")) {
-                audio::mute(ChuckStation2);
+                audio::mute(iris);
 
                 auto f = pfd::open_file("Select CD/DVD image", "", {
                     "Disc Images (*.iso; *.bin; *.cue; *.chd; *.cso; *.zso)", "*.iso *.bin *.cue *.chd *.cso *.zso",
@@ -252,7 +252,7 @@ void show_main_menubar(chuckstation2::instance* iris) {
 
                 while (!f.ready());
 
-                audio::unmute(ChuckStation2);
+                audio::unmute(iris);
 
                 if (f.result().size()) {
                     // 2-second delay to allow the disc to spin up
@@ -368,7 +368,7 @@ void show_main_menubar(chuckstation2::instance* iris) {
                             iris->window_width = widths[i];
                             iris->window_height = heights[i];
 
-                            SDL_SetWindowSize(iris->window, iris->window_width, iris->window_height + get_menubar_height(ChuckStation2));
+                            SDL_SetWindowSize(iris->window, iris->window_width, iris->window_height + get_menubar_height(iris));
                         }
                     }
 
@@ -410,7 +410,7 @@ void show_main_menubar(chuckstation2::instance* iris) {
                     icon = ICON_MS_VOLUME_DOWN;
                 }
 
-                Text(icon); SameLine();
+                Text("%s", icon); SameLine();
                 
                 SetNextItemWidth(100.0f);
                 SliderFloat("Volume", &iris->volume, 0.0f, 1.0f, "%.1f");
@@ -423,7 +423,7 @@ void show_main_menubar(chuckstation2::instance* iris) {
             }
 
             if (MenuItem(ICON_MS_DOCK_TO_BOTTOM " Show status bar", nullptr, &iris->show_status_bar)) {
-                SDL_SetWindowSize(iris->window, iris->window_width, iris->window_height + get_menubar_height(ChuckStation2));
+                SDL_SetWindowSize(iris->window, iris->window_width, iris->window_height + get_menubar_height(iris));
             }
 
             if (MenuItem(ICON_MS_OPEN_IN_NEW " Open data folder")) {
@@ -442,9 +442,9 @@ void show_main_menubar(chuckstation2::instance* iris) {
             if (MenuItem(ICON_MS_BUILD " ImGui Demo", NULL, &iris->show_imgui_demo));
             if (MenuItem(ICON_MS_SEARCH " Memory search", NULL, &iris->show_memory_search));
             if (MenuItem(ICON_MS_PHOTO_CAMERA " Take screenshot...", "F9")) {
-                audio::mute(ChuckStation2);
+                audio::mute(iris);
 
-                std::string filename = input::get_default_screenshot_filename(ChuckStation2);
+                std::string filename = input::get_default_screenshot_filename(iris);
 
                 auto f = pfd::save_file("Save screenshot", filename, {
                     "PNG (*.png)", "*.png",
@@ -456,7 +456,7 @@ void show_main_menubar(chuckstation2::instance* iris) {
 
                 while (!f.ready());
 
-                audio::unmute(ChuckStation2);
+                audio::unmute(iris);
 
                 if (f.result().size()) {
                     input::save_screenshot(iris, f.result());

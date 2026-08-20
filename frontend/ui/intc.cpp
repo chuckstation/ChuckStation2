@@ -124,7 +124,7 @@ void show_ee_interrupts(chuckstation2::instance* iris) {
         }
 
         if (BeginChild("##eeintcchild")) {
-            show_ee_intc_interrupts(ChuckStation2);
+            show_ee_intc_interrupts(iris);
         } EndChild();
     } End();
 }
@@ -198,7 +198,7 @@ void show_iop_interrupts(chuckstation2::instance* iris) {
         }
 
         if (BeginChild("##iopintcchild")) {
-            show_iop_intc_interrupts(ChuckStation2);
+            show_iop_intc_interrupts(iris);
         } EndChild();
     } End();
 }

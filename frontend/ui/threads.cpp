@@ -110,7 +110,7 @@ void show_threads(chuckstation2::instance* iris) {
             return;
         }
 
-        show_thread_list(ChuckStation2);
+        show_thread_list(iris);
     } End();
 }
 

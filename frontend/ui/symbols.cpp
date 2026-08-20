@@ -111,7 +111,7 @@ void show_symbols(chuckstation2::instance* iris) {
             flags |= ImGuiInputTextFlags_CallbackEdit;
         }
 
-        if (InputTextWithHint("##search", "Search symbols...", buf, 512, flags, edit_callback, (void*)ChuckStation2)) {
+        if (InputTextWithHint("##search", "Search symbols...", buf, 512, flags, edit_callback, (void*)iris)) {
             filter_symbols(iris, buf, regex, case_sensitive);
         } SameLine();
 

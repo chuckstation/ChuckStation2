@@ -15,10 +15,14 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        ndk {
-            // Build for all modern Android architectures
-            abiFilters += listOf("arm64-v8a", "x86_64")
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64", "x86_64")
+            isUniversalApk = false
         }
+    }
 
         externalNativeBuild {
             cmake {
@@ -65,7 +69,7 @@ android {
     externalNativeBuild {
         cmake {
             path = file("../../CMakeLists.txt")
-            version = "3.22.1"
+            version = "3.30.5"
         }
     }
 

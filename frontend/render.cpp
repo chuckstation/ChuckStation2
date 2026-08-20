@@ -88,10 +88,10 @@ bool create_image(chuckstation2::instance* iris, uint32_t width, uint32_t height
 }
 
 bool rebuild_framebuffers(chuckstation2::instance* iris) {
-    if (!shaders::count(ChuckStation2))
+    if (!shaders::count(iris))
         return true;
 
-    vulkan::wait_idle(ChuckStation2);
+    vulkan::wait_idle(iris);
 
     for (auto& pass_framebuffers : iris->shader_pass_framebuffers) {
         for (VkFramebuffer& framebuffer : pass_framebuffers) {
@@ -126,7 +126,7 @@ bool rebuild_framebuffers(chuckstation2::instance* iris) {
         }
     }
 
-    const size_t pass_count = shaders::count(ChuckStation2);
+    const size_t pass_count = shaders::count(iris);
 
     iris->shader_pass_framebuffers.resize(pass_count);
 
@@ -501,11 +501,11 @@ static inline void update_descriptor_set(chuckstation2::instance* iris, VkDescri
 }
 
 void render_shader_passes(chuckstation2::instance* iris, VkCommandBuffer command_buffer, VkImageView& output_view, VkImage& output_image) {
-    if (!shaders::count(ChuckStation2))
+    if (!shaders::count(iris))
         return;
 
-    if (iris->shader_pass_framebuffers.size() != shaders::count(ChuckStation2)) {
-        if (!rebuild_framebuffers(ChuckStation2)) {
+    if (iris->shader_pass_framebuffers.size() != shaders::count(iris)) {
+        if (!rebuild_framebuffers(iris)) {
             fprintf(stderr, "render: Failed to rebuild shader framebuffers\n");
 
             return;
@@ -514,8 +514,8 @@ void render_shader_passes(chuckstation2::instance* iris, VkCommandBuffer command
 
     int i = 0;
 
-    for (size_t pass_index = 0; pass_index < shaders::vector(ChuckStation2).size(); pass_index++) {
-        auto& pass = shaders::vector(ChuckStation2)[pass_index];
+    for (size_t pass_index = 0; pass_index < shaders::vector(iris).size(); pass_index++) {
+        auto& pass = shaders::vector(iris)[pass_index];
 
         if (pass->bypass || !pass->ready())
             continue;
@@ -525,7 +525,7 @@ void render_shader_passes(chuckstation2::instance* iris, VkCommandBuffer command
         VkFramebuffer framebuffer = iris->shader_pass_framebuffers[pass_index][fb];
 
         if (framebuffer == VK_NULL_HANDLE) {
-            if (!rebuild_framebuffers(ChuckStation2)) {
+            if (!rebuild_framebuffers(iris)) {
                 fprintf(stderr, "render: Failed to rebuild shader framebuffers\n");
 
                 return;
@@ -622,9 +622,9 @@ bool render_frame(chuckstation2::instance* iris, VkCommandBuffer command_buffer,
     iris->image = image;
 
     if (need_rebuild && image.view != VK_NULL_HANDLE) {
-        vulkan::wait_idle(ChuckStation2);
+        vulkan::wait_idle(iris);
 
-        for (auto& pass : shaders::vector(ChuckStation2)) {
+        for (auto& pass : shaders::vector(iris)) {
             if (!pass->rebuild()) {
                 fprintf(stderr, "render: Failed to rebuild shader pass\n");
 
@@ -632,7 +632,7 @@ bool render_frame(chuckstation2::instance* iris, VkCommandBuffer command_buffer,
             }
         }
 
-        if (!rebuild_framebuffers(ChuckStation2)) {
+        if (!rebuild_framebuffers(iris)) {
             fprintf(stderr, "render: Failed to rebuild shader pass framebuffers\n");
 
             return false;
@@ -656,7 +656,7 @@ bool render_frame(chuckstation2::instance* iris, VkCommandBuffer command_buffer,
     info.pClearValues = &iris->clear_value;
 
     if (iris->output_image.view != VK_NULL_HANDLE) {
-        const VkDescriptorSet descriptor_set = get_frame_descriptor_set(ChuckStation2);
+        const VkDescriptorSet descriptor_set = get_frame_descriptor_set(iris);
 
         update_vertex_buffer(iris, command_buffer);
         update_descriptor_set(iris, descriptor_set, iris->output_image.view, iris->sampler[iris->filter]);
@@ -681,7 +681,7 @@ bool render_frame(chuckstation2::instance* iris, VkCommandBuffer command_buffer,
 
     if (iris->output_image.view != VK_NULL_HANDLE) {
         VkDeviceSize offsets[] = { 0 };
-        const VkDescriptorSet descriptor_set = get_frame_descriptor_set(ChuckStation2);
+        const VkDescriptorSet descriptor_set = get_frame_descriptor_set(iris);
 
         vkCmdBindVertexBuffers(command_buffer, 0, 1, &iris->vertex_buffer, offsets);
         vkCmdBindIndexBuffer(command_buffer, iris->index_buffer, 0, VK_INDEX_TYPE_UINT16);
@@ -758,23 +758,23 @@ void refresh(chuckstation2::instance* iris) {
     if (iris->image.view == VK_NULL_HANDLE)
         return;
 
-    if (shaders::count(ChuckStation2) == 0)
+    if (shaders::count(iris) == 0)
         return;
 
-    vulkan::wait_idle(ChuckStation2);
+    vulkan::wait_idle(iris);
 
-    for (auto& pass : shaders::vector(ChuckStation2)) {
+    for (auto& pass : shaders::vector(iris)) {
         pass->rebuild();
     }
 
-    rebuild_framebuffers(ChuckStation2);
+    rebuild_framebuffers(iris);
 }
 
 void destroy(chuckstation2::instance* iris) {
     if (!iris->window)
         return;
 
-    vulkan::wait_idle(ChuckStation2);
+    vulkan::wait_idle(iris);
 
     for (auto& pass_framebuffers : iris->shader_pass_framebuffers) {
         for (VkFramebuffer& framebuffer : pass_framebuffers) {
@@ -800,7 +800,7 @@ void destroy(chuckstation2::instance* iris) {
         vkDestroyShaderModule(iris->device, iris->default_vert_shader, nullptr);
     }
 
-    shaders::clear(ChuckStation2);
+    shaders::clear(iris);
 
     if (iris->renderer) renderer_destroy(iris->renderer);
 }

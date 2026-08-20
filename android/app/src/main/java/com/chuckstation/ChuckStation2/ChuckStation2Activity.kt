@@ -10,6 +10,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.InputDevice
+import android.view.InputEvent
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.SurfaceHolder
@@ -62,7 +63,7 @@ class ChuckStation2Activity : Activity(), SurfaceHolder.Callback {
 
         // Create the surface view for Vulkan rendering
         surfaceView = SurfaceView(this).apply {
-            holder.addSurfaceCallback(this@ChuckStation2Activity)
+            holder.addCallback(this@ChuckStation2Activity)
         }
 
         setContentView(FrameLayout(this).apply {

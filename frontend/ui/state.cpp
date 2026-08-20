@@ -845,23 +845,23 @@ void show_ee_state(chuckstation2::instance* iris) {
         if (BeginChild("ee#child")) {
             switch (ee_reg_group) {
                 case 0: {
-                    show_ee_main_registers(ChuckStation2);
+                    show_ee_main_registers(iris);
                 } break;
 
                 case 1: {
-                    show_ee_cop0_registers(ChuckStation2);
+                    show_ee_cop0_registers(iris);
                 } break;
 
                 case 2: {
-                    show_ee_fpu_registers(ChuckStation2);
+                    show_ee_fpu_registers(iris);
                 } break;
 
                 case 3: {
-                    show_vu0_float(ChuckStation2);
+                    show_vu0_float(iris);
                 } break;
 
                 case 4: {
-                    show_vu0_integer(ChuckStation2);
+                    show_vu0_integer(iris);
                 } break;
             }
 
@@ -912,7 +912,7 @@ void show_iop_state(chuckstation2::instance* iris) {
             EndMenuBar();
         }
         if (BeginChild("iop#child")) {
-            show_iop_main_registers(ChuckStation2);
+            show_iop_main_registers(iris);
 
             EndChild();
         }

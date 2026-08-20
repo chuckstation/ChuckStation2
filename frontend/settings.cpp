@@ -266,7 +266,7 @@ bool parse_toml_settings(chuckstation2::instance* iris) {
             iris->shader_passes_pending.push_back(shaders->at(i).as_string()->get());
     }
 
-    return parse_mappings_file(ChuckStation2);
+    return parse_mappings_file(iris);
 }
 
 bool check_for_quick_exit(int argc, const char* argv[]) {
@@ -408,7 +408,7 @@ void parse_cli_settings(chuckstation2::instance* iris, int argc, const char* arg
 }
 
 bool init(chuckstation2::instance* iris, int argc, const char* argv[]) {
-    int r = parse_toml_settings(ChuckStation2);
+    int r = parse_toml_settings(iris);
 
     parse_cli_settings(iris, argc, argv);
 
@@ -580,7 +580,7 @@ void close(chuckstation2::instance* iris) {
 
     toml::array* shaders = tbl["shaders"]["array"].as_array();
 
-    for (auto& s : shaders::vector(ChuckStation2))
+    for (auto& s : shaders::vector(iris))
         shaders->push_back(s->get_id());
 
     // Generate input mappings file

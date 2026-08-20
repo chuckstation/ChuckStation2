@@ -74,7 +74,7 @@ void show_overlay(chuckstation2::instance* iris) {
         ImGuiWindowFlags_NoFocusOnAppearing |
         ImGuiWindowFlags_NoNav |
         ImGuiWindowFlags_NoDocking)) {
-        update_overlay(ChuckStation2);
+        update_overlay(iris);
 
         ImPlotFlags flags =
             ImPlotFlags_NoTitle |
