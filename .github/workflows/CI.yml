@@ -216,15 +216,10 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
 
-    - name: Build APK (arm64-v8a)
+    - name: Build APKs
       run: |
         cd android
-        ./gradlew assembleArm64Debug --no-daemon --stacktrace
-
-    - name: Build APK (x86_64)
-      run: |
-        cd android
-        ./gradlew assembleX86_64Debug --no-daemon --stacktrace
+        ./gradlew assembleDebug --no-daemon --stacktrace
 
     - name: Upload arm64-v8a artifact
       uses: actions/upload-artifact@v4
