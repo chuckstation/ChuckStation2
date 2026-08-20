@@ -148,7 +148,7 @@ void show_bios_stage(chuckstation2::instance* iris) {
             } break;
         }
 
-        TextColored(col, text);
+        TextColored(col, "%s", text);
     }
 
     // To-do: Add file validation

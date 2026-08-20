@@ -101,7 +101,7 @@ void show_status_bar(chuckstation2::instance* iris) {
             Text("%.1f fps", GetIO().Framerate);
 
             SetCursorPosX(GetWindowWidth() - width - 5);
-            Text(buf);
+            Text("%s", buf);
         } else {
             // | %dx%d | %dx%d | %s | %dbpp | %.1f fps",
             Text("%s", renderers[iris->renderer_backend]);
@@ -115,7 +115,7 @@ void show_status_bar(chuckstation2::instance* iris) {
             Text("%.1f fps", GetIO().Framerate);
 
             SetCursorPosX(GetWindowWidth() - width - 5);
-            Text(buf);
+            Text("%s", buf);
         }
 
 

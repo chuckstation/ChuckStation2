@@ -106,6 +106,7 @@ endif()
 # ============================================================
 
 set(PARALLEL_GS_STANDALONE ON CACHE BOOL "" FORCE)
+set(GRANITE_PLATFORM "null" CACHE STRING "" FORCE)
 add_subdirectory(deps/asmjit EXCLUDE_FROM_ALL)
 add_subdirectory(deps/tomlplusplus EXCLUDE_FROM_ALL)
 add_subdirectory(deps/libdeflate EXCLUDE_FROM_ALL)

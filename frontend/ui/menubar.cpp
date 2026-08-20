@@ -410,7 +410,7 @@ void show_main_menubar(chuckstation2::instance* iris) {
                     icon = ICON_MS_VOLUME_DOWN;
                 }
 
-                Text(icon); SameLine();
+                Text("%s", icon); SameLine();
                 
                 SetNextItemWidth(100.0f);
                 SliderFloat("Volume", &iris->volume, 0.0f, 1.0f, "%.1f");
