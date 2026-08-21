@@ -107,8 +107,8 @@ jobs:
 
     - name: Package macOS app bundle
       run: |
-        cmake --install build
         mkdir -p dist
+        cmake --install build --prefix ./dist
         cp -R ./build/ChuckStation2.app ./dist/
 
     - name: Upload artifact

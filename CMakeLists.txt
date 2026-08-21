@@ -432,8 +432,8 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT "
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT ANDROID)
     install(TARGETS ChuckStation2
-        BUNDLE DESTINATION ./install COMPONENT Runtime
-        RUNTIME DESTINATION ./install/bin COMPONENT Runtime
+        BUNDLE DESTINATION . COMPONENT Runtime
+        RUNTIME DESTINATION bin COMPONENT Runtime
     )
 
     set(BUNDLE_PATH "${CMAKE_BINARY_DIR}/ChuckStation2.app")
@@ -486,7 +486,7 @@ endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT ANDROID)
     install(TARGETS ChuckStation2
-        RUNTIME DESTINATION ./install/bin COMPONENT Runtime
+        RUNTIME DESTINATION bin COMPONENT Runtime
     )
     install(CODE
         "include(${CMAKE_CURRENT_SOURCE_DIR}/AppImage.cmake)
