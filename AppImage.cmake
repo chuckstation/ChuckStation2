@@ -63,7 +63,9 @@ Categories=X-None;"
     )
 
     # Invoke AppImageTool
-    execute_process(COMMAND ${AIT_PATH} ${APPDIR} ${ARGS_OUTPUT_NAME})
+    execute_process(
+        COMMAND ${AIT_PATH} --appimage-extract-and-run ${APPDIR} ${ARGS_OUTPUT_NAME}
+    )
     
     file(REMOVE_RECURSE "${APPDIR}")
 endfunction()
