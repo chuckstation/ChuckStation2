@@ -19,7 +19,7 @@ android {
         abi {
             isEnable = true
             reset()
-            include("arm64", "x86_64")
+            include("arm64-v8a", "x86_64")
             isUniversalApk = false
         }
     }
@@ -34,6 +34,7 @@ android {
                     "-DASMJIT_STATIC=ON",
                     "-DPARALLEL_GS_STANDALONE=ON"
                 )
+                targets += "ChuckStation2"
             }
         }
     }

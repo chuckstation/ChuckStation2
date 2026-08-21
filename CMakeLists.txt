@@ -25,6 +25,7 @@ if (APPLE AND NOT ANDROID)
     set(OSX_ICON ${CMAKE_CURRENT_SOURCE_DIR}/res/ChuckStation2.icns)
     set_source_files_properties(${OSX_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
     add_compile_options("-include" "${CMAKE_CURRENT_SOURCE_DIR}/frontend/platform/macos_compat.h")
+    set_source_files_properties(frontend/platform/macos.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++")
 endif()
 
 if (WIN32 AND NOT ANDROID)
@@ -93,7 +94,11 @@ endif()
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
     if (NOT ANDROID OR ANDROID_ABI STREQUAL "x86_64")
-        target_compile_options(ChuckStation2 PRIVATE -D_EE_USE_INTRINSICS -mssse3 -msse4.1)
+        if (NOT MSVC)
+            target_compile_options(ChuckStation2 PRIVATE -D_EE_USE_INTRINSICS -mssse3 -msse4.1)
+        else()
+            target_compile_definitions(ChuckStation2 PRIVATE _EE_USE_INTRINSICS)
+        endif()
     endif()
 endif()
 
@@ -427,8 +432,8 @@ set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT "
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT ANDROID)
     install(TARGETS ChuckStation2
-        BUNDLE DESTINATION ./install COMPONENT Runtime
-        RUNTIME DESTINATION ./install/bin COMPONENT Runtime
+        BUNDLE DESTINATION . COMPONENT Runtime
+        RUNTIME DESTINATION bin COMPONENT Runtime
     )
 
     set(BUNDLE_PATH "${CMAKE_BINARY_DIR}/ChuckStation2.app")
@@ -444,6 +449,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT ANDROID)
             COMMAND install_name_tool -add_rpath
             \"@executable_path/../Frameworks\"
             \"${BUNDLE_PATH}/Contents/MacOS/ChuckStation2\"
+            OUTPUT_QUIET ERROR_QUIET
         )
         execute_process(COMMAND echo \"Creating ICD JSON directory...\")
         make_directory(${BUNDLE_PATH}/Contents/Resources/vulkan/icd.d)
@@ -454,10 +460,12 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin" AND NOT ANDROID)
             ${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK_icd.json
             DESTINATION ${BUNDLE_PATH}/Contents/Resources/vulkan/icd.d/
         )
-        file(COPY
-            ${VULKAN_DYLIBS}
-            DESTINATION ${BUNDLE_PATH}/Contents/Frameworks/
-        )
+        if (EXISTS \"$ENV{VULKAN_SDK}/lib/libMoltenVK.dylib\")
+            file(COPY
+                $ENV{VULKAN_SDK}/lib/libMoltenVK.dylib
+                DESTINATION ${BUNDLE_PATH}/Contents/Frameworks/
+            )
+        endif()
         execute_process(COMMAND echo \"Signing app bundle...\")
         execute_process(COMMAND
             codesign --force --deep --sign - ${BUNDLE_PATH}
@@ -478,16 +486,16 @@ endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT ANDROID)
     install(TARGETS ChuckStation2
-        RUNTIME DESTINATION ./install/bin COMPONENT Runtime
+        RUNTIME DESTINATION bin COMPONENT Runtime
     )
     install(CODE
         "include(${CMAKE_CURRENT_SOURCE_DIR}/AppImage.cmake)
         make_appimage(
-            EXE \"${CMAKE_CURRENT_SOURCE_DIR}/build/ChuckStation2\"
+            EXE \"${CMAKE_BINARY_DIR}/ChuckStation2\"
             NAME \"ChuckStation2\"
             ICON \"${CMAKE_CURRENT_SOURCE_DIR}/res/ChuckStation2.png\"
             DIR_ICON \"${CMAKE_CURRENT_SOURCE_DIR}/res/ChuckStation2.png\"
-            OUTPUT_NAME \"${CMAKE_CURRENT_SOURCE_DIR}/build/ChuckStation2-${GIT_VERSION_STRING}.AppImage\"
+            OUTPUT_NAME \"${CMAKE_BINARY_DIR}/ChuckStation2-${GIT_VERSION_STRING}.AppImage\"
         )
         "
         COMPONENT Runtime
