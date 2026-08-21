@@ -25,6 +25,7 @@ if (APPLE AND NOT ANDROID)
     set(OSX_ICON ${CMAKE_CURRENT_SOURCE_DIR}/res/ChuckStation2.icns)
     set_source_files_properties(${OSX_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
     add_compile_options("-include" "${CMAKE_CURRENT_SOURCE_DIR}/frontend/platform/macos_compat.h")
+    set_source_files_properties(frontend/platform/macos.cpp PROPERTIES COMPILE_FLAGS "-x objective-c++")
 endif()
 
 if (WIN32 AND NOT ANDROID)
